@@ -1,5 +1,7 @@
 import { component$, Slot } from "@builder.io/qwik";
 import type { RequestHandler } from "@builder.io/qwik-city";
+import Sidebar from "~/components/sidebar";
+import useThemeProvider from "~/components/use-theme-provider";
 
 export const onGet: RequestHandler = async ({ cacheControl }) => {
   // Control caching for this request for best performance and to reduce hosting costs:
@@ -13,9 +15,14 @@ export const onGet: RequestHandler = async ({ cacheControl }) => {
 };
 
 export default component$(() => {
+  useThemeProvider();
+
   return (
     <div class="min-h-screen bg-neutral-100 dark:bg-black dark:text-white">
-      <Slot />
+      <div class="flex items-start">
+        <Sidebar />
+        <Slot />
+      </div>
     </div>
   );
 });

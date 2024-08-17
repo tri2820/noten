@@ -19,3 +19,14 @@ body {
 .no-scrollbar {
   @apply scrollbar scrollbar-w-0;
 }
+
+.text-hover {
+  @apply text-neutral-500 hover:text-black dark:hover:text-white
+}
+
+pglite-repl {
+  height: 100%;
+  overflow-y: auto;
+  display: block;
+}
+
