@@ -1,46 +1,56 @@
-import { component$, useContext, useSignal } from "@builder.io/qwik";
+import { component$, Resource, useResource$ } from "@builder.io/qwik";
 import { useLocation, type DocumentHead } from "@builder.io/qwik-city";
-import { LuPanelLeftOpen } from "@qwikest/icons/lucide";
-import { Channel } from "~/components/chat-sidebar";
-import ThemeButton from "~/components/theme-button";
-import { UIContext } from "~/components/use-ui-provider";
-
-const ChannelView = component$((_: { id: string }) => {
-  const channel = useSignal<Channel>({
-    id: "1",
-    created_at: new Date(),
-    name: "General",
-    type: "text",
-  });
-
-  return (
-    <div class="flex-1 p-4">
-      {_.id} {JSON.stringify(channel.value)}
-    </div>
-  );
-});
+import TopBar from "~/components/top-bar";
+import useSupabaseProvider from "~/components/use-supabase-provider";
 
 export default component$(() => {
   const loc = useLocation();
-  const ui = useContext(UIContext);
+
+  const supabase = useSupabaseProvider();
+  const channelResource = useResource$(async ({ track, cleanup }) => {
+    track(() => supabase.client);
+    track(() => loc.params.id);
+
+    if (!supabase.client) return null;
+
+    const controller = new AbortController();
+    cleanup(() => {
+      controller.abort();
+    });
+
+    return await supabase
+      .client!.from("channel")
+      .select()
+      .eq("id", loc.params.id)
+      .abortSignal(controller.signal)
+      .single();
+  });
 
   return (
-    <div class="flex h-screen flex-1 flex-col overflow-hidden bg-neutral-200 dark:bg-black">
-      <div class="flex h-14 flex-none items-center space-x-2 px-4 ">
-        {ui.sidebar_close && (
-          <button
-            onClick$={() => {
-              ui.sidebar_close = false;
-            }}
-          >
-            <LuPanelLeftOpen class="h-4 w-4" />
-          </button>
-        )}
-        <div class="flex-1" />
-        <ThemeButton />
-      </div>
+    <div class="flex-1  ">
+      <Resource
+        value={channelResource}
+        onPending={() => <div>Loading...</div>}
+        onRejected={(reason) => <div>Error: {JSON.stringify(reason)}</div>}
+        onResolved={(res) => {
+          if (!res) return <></>;
+          if (res.error) return <div>Error: {res.error.message}</div>;
+          const channel = res.data;
+          return (
+            <div
+              data-ctype={channel.type}
+              class="flex h-screen flex-col overflow-hidden  data-[ctype=text]:bg-white data-[ctype=voice]:bg-neutral-200 data-[ctype=text]:dark:bg-neutral-900 data-[ctype=voice]:dark:bg-black"
+            >
+              <TopBar />
+              <div class="flex-1 p-4">
+                {loc.params.id}
 
-      <ChannelView id={loc.params.id} />
+                <div class="">{JSON.stringify(channel)}</div>
+              </div>
+            </div>
+          );
+        }}
+      />
     </div>
   );
 });

@@ -23,81 +23,45 @@ function convertChannelNameToSlug(channelName: string): string {
 export default component$(() => {
   const channels = useSignal<Channel[]>([
     {
-      id: "1",
+      id: "c9a22d1c-6cb6-4b7f-9e4c-5a9c7f0b7c8c",
       name: "General",
       created_at: new Date(),
       type: "text",
     },
     {
-      id: "2",
+      id: "6e2f3c9a-6f4f-4f1b-8ec4-6f3f3c9a6f4f",
       name: "Rumors",
       created_at: new Date("2022-01-01"),
       type: "text",
     },
     {
-      id: "3",
+      id: "9e9fafc1-9caf-4f5e-8b9f-5f5f5f5f5f5f",
       name: "Random",
       created_at: new Date("2022-01-02"),
       type: "text",
     },
     {
-      id: "4",
+      id: "8c9d5f6a-6f4f-4f1b-8ec4-6f3f3c9a6f4f",
       name: "Meme Central",
       created_at: new Date("2022-01-03"),
       type: "text",
     },
     {
-      id: "5",
-      name: "Programming",
-      created_at: new Date("2022-01-04"),
-      type: "text",
-    },
-    {
-      id: "6",
-      name: "Art",
-      created_at: new Date("2022-01-05"),
-      type: "text",
-    },
-    {
-      id: "7",
-      name: "Music",
-      created_at: new Date("2022-01-06"),
-      type: "text",
-    },
-    {
-      id: "8",
+      id: "b11c9be1-b619-4ef5-be1b-a1cd9ef265b7",
       name: "Voice Chat",
       created_at: new Date("2022-01-07"),
       type: "voice",
     },
     {
-      id: "9",
+      id: "b5e2cf01-8bb6-4fcd-ad88-0efb611195da",
       name: "Casual Chat",
       created_at: new Date("2022-01-07"),
       type: "voice",
     },
     {
-      id: "10",
+      id: "caa8b54a-eb5e-4134-8ae2-a3946a428ec7",
       name: "Strategy Session",
       created_at: new Date("2022-01-08"),
-      type: "voice",
-    },
-    {
-      id: "11",
-      name: "Sales Pitch Practice",
-      created_at: new Date("2022-01-09"),
-      type: "voice",
-    },
-    {
-      id: "12",
-      name: "Product Meeting",
-      created_at: new Date("2022-01-10"),
-      type: "voice",
-    },
-    {
-      id: "13",
-      name: "Design Discussion",
-      created_at: new Date("2022-01-11"),
       type: "voice",
     },
   ]);
