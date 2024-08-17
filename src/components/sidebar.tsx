@@ -58,7 +58,7 @@ export default component$(() => {
           onClick$={() => {
             ui.sidebar_mode = "library";
           }}
-          class="text-hover flex-none"
+          class="icon-hover flex-none"
         >
           <BsBookmarkFill />
         </button>
@@ -66,7 +66,7 @@ export default component$(() => {
           onClick$={() => {
             ui.sidebar_mode = "chat";
           }}
-          class="text-hover flex-none"
+          class="icon-hover flex-none"
         >
           <BsChatFill />
         </button>

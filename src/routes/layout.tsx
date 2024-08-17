@@ -1,6 +1,7 @@
 import { component$, Slot } from "@builder.io/qwik";
-import type { RequestHandler } from "@builder.io/qwik-city";
+import { routeLoader$, type RequestHandler } from "@builder.io/qwik-city";
 import Sidebar from "~/components/sidebar";
+import UseUiProvider, { UIContext } from "~/components/use-ui-provider";
 import useUiProvider from "~/components/use-ui-provider";
 
 export const onGet: RequestHandler = async ({ cacheControl }) => {
@@ -14,9 +15,21 @@ export const onGet: RequestHandler = async ({ cacheControl }) => {
   });
 };
 
-export default component$(() => {
-  useUiProvider();
+export const useUI = routeLoader$<UIContext>(({ sharedMap, cookie }) => {
+  const ui: UIContext | undefined = cookie.get("ui")?.json();
+  if (!ui)
+    return {
+      theme: "light",
+      sidebar_close: false,
+      sidebar_mode: "library",
+    };
 
+  return ui;
+});
+
+export default component$(() => {
+  const ui = useUI();
+  useUiProvider(ui.value);
   return (
     <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">
       <div class="flex items-start">

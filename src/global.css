@@ -23,3 +23,7 @@ body {
   @apply text-neutral-500 hover:text-black dark:hover:text-white
 }
 
+.icon-hover {
+  @apply text-neutral-400 dark:text-neutral-600 hover:text-black dark:hover:text-white
+}
+

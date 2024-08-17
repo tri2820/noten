@@ -4,28 +4,23 @@ import {
   useStore,
   useVisibleTask$,
 } from "@builder.io/qwik";
+import Cookies from "js-cookie";
 
-type UIContext = {
+export type UIContext = {
   theme: string;
   sidebar_close: boolean;
   sidebar_mode: "library" | "chat";
 };
 export const UIContext = createContextId<UIContext>("ui");
 
-export default () => {
-  const store = useStore<UIContext>({
-    theme: "light",
-    sidebar_close: false,
-    sidebar_mode: "library",
-  });
+export default (ui: UIContext) => {
+  const store = useStore<UIContext>(ui);
   useContextProvider(UIContext, store);
-  useVisibleTask$(
-    () => {
-      store.theme = localStorage.getItem("theme") ?? "light";
-    },
-    {
-      strategy: "document-ready",
-    },
-  );
+  useVisibleTask$(({ track }) => {
+    track(store);
+    const s = JSON.stringify(store);
+    Cookies.set("ui", s);
+  });
+
   return store;
 };

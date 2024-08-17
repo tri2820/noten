@@ -1,4 +1,4 @@
-import { component$ } from "@builder.io/qwik";
+import { component$, createContextId, useStore } from "@builder.io/qwik";
 import { useDocumentHead, useLocation } from "@builder.io/qwik-city";
 
 /**
@@ -45,15 +45,18 @@ export const RouterHead = component$(() => {
       ))}
       <script
         dangerouslySetInnerHTML={`
-        (function() {
-          function setTheme(theme) {
-            document.documentElement.className = theme;
-            localStorage.setItem('theme', theme);
-          }
-          var theme = localStorage.getItem('theme');
-          setTheme(theme ?? 'light');
-        })();
-      `}
+          (function() {
+            try {
+              const cookies = document.cookie.split(';').map(c => c.trim());
+              const ui = cookies.find(c => c.startsWith('ui='));
+              if (!ui) return;
+              const j = JSON.parse(decodeURIComponent(ui.split('=')[1]));
+              document.documentElement.className = j.theme ?? 'light';
+            } catch (e) {
+              console.warn("Cannot check theme", e);
+            }
+          })();
+        `}
       ></script>
     </>
   );
