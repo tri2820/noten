@@ -43,6 +43,18 @@ export const RouterHead = component$(() => {
             : { dangerouslySetInnerHTML: s.script })}
         />
       ))}
+      <script
+        dangerouslySetInnerHTML={`
+        (function() {
+          function setTheme(theme) {
+            document.documentElement.className = theme;
+            localStorage.setItem('theme', theme);
+          }
+          var theme = localStorage.getItem('theme');
+          setTheme(theme ?? 'light');
+        })();
+      `}
+      ></script>
     </>
   );
 });

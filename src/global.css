@@ -6,4 +6,16 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  font-family: "Poppins";
+}
 
+
+* {
+  @apply border-neutral-300 dark:border-neutral-900;
+  @apply scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-900 scrollbar-thumb-rounded-full;
+}
+
+.no-scrollbar {
+  @apply scrollbar scrollbar-w-0;
+}
