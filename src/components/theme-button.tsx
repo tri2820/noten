@@ -5,10 +5,10 @@ import {
   useVisibleTask$,
 } from "@builder.io/qwik";
 import { LuMoon, LuSun } from "@qwikest/icons/lucide";
-import { ThemeContext } from "./use-theme-provider";
+import { UIContext } from "./use-ui-provider";
 
 export default component$(() => {
-  const _ = useContext(ThemeContext);
+  const ui = useContext(UIContext);
 
   return (
     <button
@@ -18,10 +18,10 @@ export default component$(() => {
         const nextTheme = _theme === "light" ? "dark" : "light";
         document.documentElement.className = nextTheme;
         localStorage.setItem("theme", nextTheme);
-        _.theme = nextTheme;
+        ui.theme = nextTheme;
       }}
     >
-      {_.theme == "light" ? (
+      {ui.theme == "light" ? (
         <LuSun class="h-4 w-4" />
       ) : (
         <LuMoon class="h-4 w-4" />

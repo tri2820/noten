@@ -5,16 +5,18 @@ import {
   useVisibleTask$,
 } from "@builder.io/qwik";
 
-type ThemeContext = {
+type UIContext = {
   theme: string;
+  sidebar_close: boolean;
 };
-export const ThemeContext = createContextId<ThemeContext>("theme");
+export const UIContext = createContextId<UIContext>("ui");
 
 export default () => {
-  const store = useStore<ThemeContext>({
+  const store = useStore<UIContext>({
     theme: "light",
+    sidebar_close: false,
   });
-  useContextProvider(ThemeContext, store);
+  useContextProvider(UIContext, store);
   useVisibleTask$(
     () => {
       store.theme = localStorage.getItem("theme") ?? "light";
