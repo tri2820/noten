@@ -10,7 +10,7 @@ export default component$(() => {
 
   return (
     <div class="flex h-screen flex-1 flex-col overflow-hidden bg-white dark:bg-neutral-900">
-      <TopBar />
+      <TopBar name={"Just a note"} />
 
       <div class="flex flex-1 flex-col overflow-y-auto">
         <TipTap content={`Hey ${loc.params.id}`} />
