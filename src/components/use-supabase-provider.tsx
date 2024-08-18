@@ -29,7 +29,6 @@ export default () => {
   useContextProvider(SupabaseContext, store);
   useVisibleTask$(
     () => {
-      console.log("create...");
       const client = createBrowserClient(
         import.meta.env.PUBLIC_SUPABASE_URL,
         import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
@@ -89,6 +88,7 @@ export function useSupabaseRealtime<T extends { id: string }>(_: {
       .select()
       .eq(_.filter.value.col, _.filter.value.value);
 
+    // await new Promise((resolve) => setTimeout(resolve, 5000));
     loaded.value = true;
     if (_select.error) {
       console.warn("error", _select.error);
