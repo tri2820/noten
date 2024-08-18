@@ -22,7 +22,16 @@ import { Note } from "./library-sidebar";
 export type DataContext = {
   channels: Channel[];
   notes: Note[];
-  profile: { [id: string]: any };
+  profile: {
+    [id: string]:
+      | {
+          id: string;
+          name: string;
+          avatar: string;
+          created_at: Date;
+        }
+      | undefined;
+  };
 };
 export const DataContext = createContextId<DataContext>("data");
 export default () => {

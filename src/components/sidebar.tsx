@@ -6,6 +6,7 @@ import chatSidebar from "./chat-sidebar";
 import librarySidebar from "./library-sidebar";
 import { UIContext } from "./use-ui-provider";
 import { SupabaseContext } from "./use-supabase-provider";
+import Avatar from "./avatar";
 
 export default component$(() => {
   const supabase = useContext(SupabaseContext);
@@ -58,12 +59,7 @@ export default component$(() => {
         </button>
         <div class="flex-1" />
 
-        {supabase.profile && (
-          <img
-            class="h-8 w-8 rounded-lg border"
-            src={supabase.profile.avatar}
-          />
-        )}
+        <Avatar class="h-8 w-8 rounded-lg" src={supabase.profile?.avatar} />
       </div>
     </div>
   );

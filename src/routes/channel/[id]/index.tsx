@@ -14,8 +14,11 @@ import { BsSendFill } from "@qwikest/icons/bootstrap";
 import { LuSend } from "@qwikest/icons/lucide";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { stringify } from "querystring";
+import Avatar from "~/components/avatar";
 import { Channel } from "~/components/chat-sidebar";
 import ExampleAvatar from "~/components/example-avatar.txt?raw";
+import PendingMessages from "~/components/pending-messages";
+import PendingText from "~/components/pending-text";
 import TopBar from "~/components/top-bar";
 import { DataContext } from "~/components/use-data-provider";
 import {
@@ -26,49 +29,6 @@ import {
 } from "~/components/use-supabase-provider";
 import { dateF, HEAD } from "~/utils";
 
-const MessageLoading = component$(() => {
-  return (
-    <div class="animate-pulse">
-      <div class="flex cursor-pointer items-start space-x-4 px-8 py-4 hover:bg-neutral-100 hover:dark:bg-neutral-800">
-        <div class="h-12 w-12 flex-none rounded-lg  bg-neutral-200 dark:bg-neutral-700" />
-        <div class="flex-1 space-y-1">
-          <div class="flex items-center space-x-2 font-semibold">
-            <div class="h-[1rem] w-16 flex-none rounded-full bg-neutral-200 dark:bg-neutral-700" />
-            <div class="ml-2 h-[1rem] w-8 rounded-full bg-neutral-200 text-xs font-normal text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400" />
-          </div>
-
-          <div class="h-[1rem] w-full rounded-full bg-neutral-200 dark:bg-neutral-700"></div>
-          <div class="h-[1rem] w-1/2 rounded-full bg-neutral-200 dark:bg-neutral-700"></div>
-        </div>
-      </div>
-      <div class="flex cursor-pointer items-start space-x-4 px-8 py-4 hover:bg-neutral-100 hover:dark:bg-neutral-800">
-        <div class="h-12 w-12 flex-none rounded-lg  bg-neutral-200 dark:bg-neutral-700" />
-        <div class="flex-1 space-y-1">
-          <div class="flex items-center space-x-2 font-semibold">
-            <div class="h-[1rem] w-16 flex-none rounded-full bg-neutral-200 dark:bg-neutral-700" />
-            <div class="ml-2 h-[1rem] w-8 rounded-full bg-neutral-200 text-xs font-normal text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400" />
-          </div>
-
-          <div class="h-[1rem] w-full rounded-full bg-neutral-200 dark:bg-neutral-700"></div>
-          <div class="h-[1rem] w-1/2 rounded-full bg-neutral-200 dark:bg-neutral-700"></div>
-        </div>
-      </div>
-      <div class="flex cursor-pointer items-start space-x-4 px-8 py-4 hover:bg-neutral-100 hover:dark:bg-neutral-800">
-        <div class="h-12 w-12 flex-none rounded-lg  bg-neutral-200 dark:bg-neutral-700" />
-        <div class="flex-1 space-y-1">
-          <div class="flex items-center space-x-2 font-semibold">
-            <div class="h-[1rem] w-16 flex-none rounded-full bg-neutral-200 dark:bg-neutral-700" />
-            <div class="ml-2 h-[1rem] w-8 rounded-full bg-neutral-200 text-xs font-normal text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400" />
-          </div>
-
-          <div class="h-[1rem] w-full rounded-full bg-neutral-200 dark:bg-neutral-700"></div>
-          <div class="h-[1rem] w-1/2 rounded-full bg-neutral-200 dark:bg-neutral-700"></div>
-        </div>
-      </div>
-    </div>
-  );
-});
-
 const TextChannelView = component$((_: { channel: Channel }) => {
   const data = useContext(DataContext);
 
@@ -78,13 +38,29 @@ const TextChannelView = component$((_: { channel: Channel }) => {
     load: $(async (client: SupabaseClient) => {
       const _select = await client
         .from("message")
-        .select("*, profile(*)")
+        .select("*")
         .eq("thread_id", _.channel.id);
 
       if (_select.error) {
         console.warn("error", _select.error);
         return [];
       }
+
+      (async () => {
+        const profile_ids = _select.data.map((m) => m.author_id);
+        const _select_profiles = await client
+          .from("profile")
+          .select("*")
+          .in("id", profile_ids);
+        if (_select_profiles.error) {
+          console.error("error", _select_profiles.error);
+          return;
+        }
+
+        _select_profiles.data.forEach((p) => {
+          data.profile[p.id] = p;
+        });
+      })();
 
       return _select.data;
     }),
@@ -120,12 +96,6 @@ const TextChannelView = component$((_: { channel: Channel }) => {
     content: string;
     created_at: string;
     author_id: string;
-    profile: {
-      id: string;
-      name: string;
-      avatar: string;
-      created_at: string;
-    };
   }>(realtime);
 
   const ref = useSignal<HTMLElement>();
@@ -172,13 +142,12 @@ const TextChannelView = component$((_: { channel: Channel }) => {
                   key={message.id}
                   class="flex cursor-pointer items-start space-x-4 px-8 py-4 hover:bg-neutral-100 hover:dark:bg-neutral-800"
                 >
-                  <img
-                    src={message.profile.avatar}
-                    class="h-12 w-12 flex-none rounded-lg border"
-                  />
+                  <Avatar src={data.profile[message.author_id]?.avatar} />
                   <div class="flex-1 space-y-1">
                     <div class="font-semibold">
-                      {message.profile.name}
+                      <PendingText
+                        value={data.profile[message.author_id]?.name}
+                      />
                       <span class="ml-2 text-xs font-normal text-neutral-500 dark:text-neutral-400">
                         {dateF(message.created_at)}
                       </span>
@@ -191,7 +160,7 @@ const TextChannelView = component$((_: { channel: Channel }) => {
             </div>
           )
         ) : (
-          <MessageLoading />
+          <PendingMessages />
         )}
       </div>
 

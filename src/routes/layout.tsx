@@ -62,12 +62,12 @@ export const useUI = routeLoader$<UIContext>(({ sharedMap, cookie }) => {
 });
 
 export default component$(() => {
-  const loc = useLocation();
+  useDataProvider();
+  useSupabaseProvider();
   const ui = useUI();
   useUiProvider(ui.value);
-  useSupabaseProvider();
-  useDataProvider();
 
+  const loc = useLocation();
   if (loc.url.pathname === "/login/") return <Slot />;
 
   return (

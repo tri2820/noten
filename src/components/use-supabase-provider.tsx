@@ -30,6 +30,7 @@ type SupabaseContext = {
 
 export const SupabaseContext = createContextId<SupabaseContext>("supabase");
 export default () => {
+  const data = useContext(DataContext);
   const store = useStore<SupabaseContext>({});
   useContextProvider(SupabaseContext, store);
 
@@ -57,6 +58,7 @@ export default () => {
       .single();
 
     store.profile = _select.data;
+    data.profile[_select.data.id] = _select.data;
     cleanup(() => {
       store.profile = undefined;
     });
@@ -122,8 +124,8 @@ export function useSupabaseRealtime<T extends { id: string }>(
     const _ = track(props);
     const client = track(() => supabase.client);
     if (!client) return;
-    console.log("load...", _);
     rows.value = (await _.load?.(client)) ?? [];
+
     loaded.value = true;
     client
       .channel("db-changes")
