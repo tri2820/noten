@@ -107,22 +107,25 @@ export function useSupabaseResourceQrl<T>(
 
 export const useSupabaseResource$ = implicit$FirstArg(useSupabaseResourceQrl);
 
-export function useSupabaseRealtime<T extends { id: string }>(
-  props: Signal<{
-    table: string;
-    filter: string;
-    load?: QRL<(client: SupabaseClient) => Promise<T[]>>;
-    select?: string;
-    modify_row?: QRL<(client: SupabaseClient, row: T) => Promise<T>>;
-  }>,
-) {
+export function useSupabaseRealtime<T extends { id: string }>() {
+  const store = useStore<{
+    opts?: {
+      table: string;
+      filter: string;
+      load?: QRL<(client: SupabaseClient) => Promise<T[]>>;
+      select?: string;
+      modify_row?: QRL<(client: SupabaseClient, row: T) => Promise<T>>;
+    };
+  }>({});
+
   const supabase = useContext(SupabaseContext);
   const loaded = useSignal<boolean>(false);
   const latest_inserted = useSignal<T>();
   const rows = useSignal<T[]>([]);
   useVisibleTask$(async ({ track, cleanup }) => {
-    const _ = track(props);
+    const _ = track(() => store.opts);
     const client = track(() => supabase.client);
+    if (!_) return;
     if (!client) return;
     rows.value = (await _.load?.(client)) ?? [];
 
@@ -159,5 +162,6 @@ export function useSupabaseRealtime<T extends { id: string }>(
     rows,
     latest_inserted,
     loaded,
+    store,
   };
 }

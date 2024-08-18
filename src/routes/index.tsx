@@ -1,6 +1,6 @@
 import { component$, useContext } from "@builder.io/qwik";
 import { type DocumentHead } from "@builder.io/qwik-city";
-import TipTap from "~/components/tip-tap";
+import TipTap from "~/components/use-tip-tap";
 import TopBar from "~/components/top-bar";
 import { UIContext } from "~/components/use-ui-provider";
 import { HEAD } from "~/utils";

@@ -1,8 +1,6 @@
 import {
   $,
   component$,
-  Resource,
-  Signal,
   useComputed$,
   useContext,
   useSignal,
@@ -11,12 +9,9 @@ import {
 } from "@builder.io/qwik";
 import { useLocation, type DocumentHead } from "@builder.io/qwik-city";
 import { BsSendFill } from "@qwikest/icons/bootstrap";
-import { LuSend } from "@qwikest/icons/lucide";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { stringify } from "querystring";
 import Avatar from "~/components/avatar";
 import { Channel } from "~/components/chat-sidebar";
-import ExampleAvatar from "~/components/example-avatar.txt?raw";
 import PendingMessages from "~/components/pending-messages";
 import PendingText from "~/components/pending-text";
 import TopBar from "~/components/top-bar";
@@ -24,79 +19,86 @@ import { DataContext } from "~/components/use-data-provider";
 import {
   SupabaseContext,
   useSupabaseRealtime,
-  useSupabaseResource$,
-  useSupabaseResourceQrl,
 } from "~/components/use-supabase-provider";
 import { dateF, HEAD } from "~/utils";
 
 const TextChannelView = component$((_: { channel: Channel }) => {
   const data = useContext(DataContext);
-
-  const realtime = useComputed$(() => ({
-    table: "message",
-    filter: `thread_id=eq.${_.channel.id}`,
-    load: $(async (client: SupabaseClient) => {
-      const _select = await client
-        .from("message")
-        .select("*")
-        .eq("thread_id", _.channel.id);
-
-      if (_select.error) {
-        console.warn("error", _select.error);
-        return [];
-      }
-
-      (async () => {
-        const profile_ids = _select.data.map((m) => m.author_id);
-        const _select_profiles = await client
-          .from("profile")
-          .select("*")
-          .in("id", profile_ids);
-        if (_select_profiles.error) {
-          console.error("error", _select_profiles.error);
-          return;
-        }
-
-        _select_profiles.data.forEach((p) => {
-          data.profile[p.id] = p;
-        });
-      })();
-
-      return _select.data;
-    }),
-    modify_row: $(async (client: SupabaseClient, row: any) => {
-      const profile =
-        data.profile[row.author_id] ??
-        (await client.from("profile").select().eq("id", row.author_id).single())
-          .data;
-
-      data.profile = {
-        ...data.profile,
-        [profile.id]: profile,
-      };
-
-      if (!profile) {
-        console.error("Cannot get profile for message", row);
-        return;
-      }
-
-      return {
-        ...row,
-        profile,
-      };
-    }),
-  }));
-
   const {
     rows: messages,
     loaded,
     latest_inserted,
+    store,
   } = useSupabaseRealtime<{
     id: string;
     content: string;
     created_at: string;
     author_id: string;
-  }>(realtime);
+  }>();
+
+  useVisibleTask$(({ track }) => {
+    track(() => _.channel);
+    console.log("set store opts");
+    store.opts = {
+      table: "message",
+      filter: `thread_id=eq.${_.channel.id}`,
+      load: $(async (client: SupabaseClient) => {
+        const _select = await client
+          .from("message")
+          .select("*")
+          .eq("thread_id", _.channel.id);
+
+        if (_select.error) {
+          console.warn("error", _select.error);
+          return [];
+        }
+
+        (async () => {
+          const profile_ids = _select.data.map((m) => m.author_id);
+          const _select_profiles = await client
+            .from("profile")
+            .select("*")
+            .in("id", profile_ids);
+          if (_select_profiles.error) {
+            console.error("error", _select_profiles.error);
+            return;
+          }
+
+          _select_profiles.data.forEach((p) => {
+            data.profile[p.id] = p;
+          });
+        })();
+
+        return _select.data;
+      }),
+      modify_row: $(async (client: SupabaseClient, row: any) => {
+        const profile =
+          data.profile[row.author_id] ??
+          (
+            await client
+              .from("profile")
+              .select()
+              .eq("id", row.author_id)
+              .single()
+          ).data;
+
+        data.profile = {
+          ...data.profile,
+          [profile.id]: profile,
+        };
+
+        if (!profile) {
+          console.error("Cannot get profile for message", row);
+          return;
+        }
+
+        return {
+          ...row,
+          profile,
+        };
+      }),
+    };
+  });
 
   const ref = useSignal<HTMLElement>();
 
@@ -123,10 +125,12 @@ const TextChannelView = component$((_: { channel: Channel }) => {
 
   useVisibleTask$(({ track }) => {
     track(loaded);
-    ref.value!.scrollTo({
-      top: ref.value!.scrollHeight,
-      behavior: "instant",
-    });
+    setTimeout(() => {
+      ref.value!.scrollTo({
+        top: ref.value!.scrollHeight,
+        behavior: "instant",
+      });
+    }, 500);
   });
 
   return (
@@ -203,7 +207,7 @@ export default component$(() => {
   useVisibleTask$(({ track, cleanup }) => {
     track(loc);
     const c = data.channels.find((x) => x.id == loc.params.id);
-    if (!c) throw new Error("Channel not found");
+    if (!c) return;
     store.channel = c;
     cleanup(() => {
       store.channel = undefined;

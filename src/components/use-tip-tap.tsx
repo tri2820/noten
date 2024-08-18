@@ -1,15 +1,20 @@
-import { component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import {
+  component$,
+  Signal,
+  useSignal,
+  useStore,
+  useVisibleTask$,
+} from "@builder.io/qwik";
 import { useLocation } from "@builder.io/qwik-city";
 import { Content, Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 
-export default component$((_: { content?: Content }) => {
-  const loc = useLocation();
-  const ref = useSignal<Element>();
+export default (ref: Signal<HTMLElement | undefined>) => {
+  const store = useStore<{ content?: string }>({});
 
   useVisibleTask$(({ track, cleanup }) => {
-    track(loc);
     const element = track(ref);
+    const content = track(() => store.content);
     if (!element) return;
 
     const editor = new Editor({
@@ -21,7 +26,7 @@ export default component$((_: { content?: Content }) => {
             "prose prose-sm sm:prose-base lg:prose-lg p-8 lg:p-16 focus:outline-none prose-neutral dark:prose-invert max-w-none flex-1",
         },
       },
-      content: _.content,
+      content,
     });
 
     cleanup(() => {
@@ -29,5 +34,5 @@ export default component$((_: { content?: Content }) => {
     });
   });
 
-  return <div ref={ref} class="flex flex-1 flex-col" />;
-});
+  return store;
+};
