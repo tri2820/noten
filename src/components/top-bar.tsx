@@ -12,7 +12,7 @@ import ThemeButton from "./theme-button";
 export default component$((_: { name: string }) => {
   const ui = useContext(UIContext);
   return (
-    <div class="flex h-14 flex-none items-center space-x-2 px-4">
+    <div class="flex h-14 flex-none items-center space-x-2 border-b px-4">
       {ui.sidebar_close && (
         <button
           onClick$={() => {
