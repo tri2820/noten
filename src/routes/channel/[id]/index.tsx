@@ -114,7 +114,6 @@ const TextChannelView = component$(
 
     useVisibleTask$(({ track }) => {
       track(loaded);
-      track;
       ref.value!.scrollTo({
         top: ref.value!.scrollHeight,
         behavior: "instant",
@@ -158,7 +157,7 @@ const TextChannelView = component$(
         </div>
 
         <div class="flex-none space-y-2 px-4 pb-4">
-          <div class=" flex  items-start rounded-lg border  bg-neutral-100 dark:bg-neutral-800 ">
+          <div class=" flex  items-start rounded-lg border  bg-white dark:bg-neutral-800 ">
             <textarea
               bind:value={input}
               onKeyDown$={(ev: KeyboardEvent) => {
@@ -174,7 +173,7 @@ const TextChannelView = component$(
             />
             <button
               onClick$={submit}
-              class="text-hover m-4 rounded-lg p-2 hover:bg-neutral-300 hover:dark:bg-neutral-700"
+              class="text-hover m-4 rounded-lg p-2 hover:bg-neutral-200 hover:dark:bg-neutral-700"
             >
               <BsSendFill class="h-4 w-4" />
             </button>

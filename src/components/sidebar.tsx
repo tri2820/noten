@@ -18,7 +18,7 @@ export default component$(() => {
   return (
     <div
       data-close={ui.sidebar_close}
-      class="flex h-screen w-64 flex-none flex-col items-start overflow-y-hidden border-r duration-300 data-[close]:w-0 "
+      class="flex h-screen w-64 flex-none flex-col items-stretch overflow-y-hidden border-r duration-300 data-[close]:w-0 "
     >
       <S.value>
         <div class=" flex h-14 w-full flex-none items-center space-x-2 border-b px-4">
