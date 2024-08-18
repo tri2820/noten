@@ -1,4 +1,6 @@
 import {
+  $,
+  component$,
   createContextId,
   implicit$FirstArg,
   noSerialize,
@@ -13,20 +15,53 @@ import {
   useStore,
   useVisibleTask$,
 } from "@builder.io/qwik";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient, User } from "@supabase/supabase-js";
 import {
   createBrowserClient,
   createServerClient,
 } from "./supabase/supabase-auth-helpers-qwik";
+import { DataContext } from "./use-data-provider";
 
 type SupabaseContext = {
   client?: NoSerialize<SupabaseClient>;
+  user?: NoSerialize<User>;
+  profile?: { [key: string]: any };
 };
 
 export const SupabaseContext = createContextId<SupabaseContext>("supabase");
 export default () => {
   const store = useStore<SupabaseContext>({});
   useContextProvider(SupabaseContext, store);
+
+  const getProfile = $(async (client: SupabaseClient, user: User) => {
+    console.log("user.id", user.id);
+    const _select = await client.from("profile").select();
+    //   .eq("id", user.id)
+    //   .single();
+    // return _select.data;
+    console.log("_select", _select);
+    return undefined;
+  });
+
+  useVisibleTask$(async ({ track, cleanup }) => {
+    const u = track(() => store.user);
+    if (!u) {
+      store.profile = undefined;
+      return;
+    }
+
+    const _select = await store
+      .client!.from("profile")
+      .select()
+      .eq("id", u.id)
+      .single();
+
+    store.profile = _select.data;
+    cleanup(() => {
+      store.profile = undefined;
+    });
+  });
+
   useVisibleTask$(
     () => {
       const client = createBrowserClient(
@@ -34,6 +69,13 @@ export default () => {
         import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
       );
       store.client = noSerialize(client);
+      client.auth.onAuthStateChange(async (ev, session) => {
+        console.log("onAuth", ev, session);
+        const user = session?.user;
+        if (user?.id !== store.user?.id) {
+          store.user = noSerialize(user);
+        }
+      });
     },
     {
       strategy: "document-ready",
@@ -63,40 +105,26 @@ export function useSupabaseResourceQrl<T>(
 
 export const useSupabaseResource$ = implicit$FirstArg(useSupabaseResourceQrl);
 
-export function useSupabaseRealtime<T extends { id: string }>(_: {
-  filter: Signal<
-    | {
-        table: string;
-        col: string;
-        value: string;
-      }
-    | undefined
-  >;
-}) {
+export function useSupabaseRealtime<T extends { id: string }>(
+  props: Signal<{
+    table: string;
+    filter: string;
+    load?: QRL<(client: SupabaseClient) => Promise<T[]>>;
+    select?: string;
+    modify_row?: QRL<(client: SupabaseClient, row: T) => Promise<T>>;
+  }>,
+) {
   const supabase = useContext(SupabaseContext);
   const loaded = useSignal<boolean>(false);
   const latest_inserted = useSignal<T>();
   const rows = useSignal<T[]>([]);
   useVisibleTask$(async ({ track, cleanup }) => {
-    track(_.filter);
+    const _ = track(props);
     const client = track(() => supabase.client);
     if (!client) return;
-    if (!_.filter.value) return;
-
-    const _select = await client
-      .from(_.filter.value.table)
-      .select()
-      .eq(_.filter.value.col, _.filter.value.value);
-
-    // await new Promise((resolve) => setTimeout(resolve, 5000));
+    console.log("load...", _);
+    rows.value = (await _.load?.(client)) ?? [];
     loaded.value = true;
-    if (_select.error) {
-      console.warn("error", _select.error);
-      return;
-    }
-
-    rows.value = _select.data as T[];
-    console.log("subscribe to", _.filter.value);
     client
       .channel("db-changes")
       .on(
@@ -104,16 +132,15 @@ export function useSupabaseRealtime<T extends { id: string }>(_: {
         {
           event: "INSERT",
           schema: "public",
-          table: _.filter.value.table,
-          filter: `${_.filter.value.col}=eq.${_.filter.value.value}`,
+          table: _.table,
+          filter: _.filter,
         },
-        (payload) => {
-          console.log("received new for", _.filter.value);
+        async (payload) => {
+          console.log("received new for", _);
           const m = payload.new as T;
-          if (rows.value.some((n) => n.id == m.id)) return;
-          rows.value = [...rows.value, m];
-
-          latest_inserted.value = m;
+          const row = _.modify_row ? await _.modify_row(client, m) : m;
+          rows.value = [...rows.value, row];
+          latest_inserted.value = row;
         },
       )
       // TODO: handle UPDATE, DELETE

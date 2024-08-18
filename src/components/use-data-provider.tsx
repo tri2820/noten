@@ -22,10 +22,12 @@ import { Note } from "./library-sidebar";
 export type DataContext = {
   channels: Channel[];
   notes: Note[];
+  profile: { [id: string]: any };
 };
 export const DataContext = createContextId<DataContext>("data");
 export default () => {
   const store = useStore<DataContext>({
+    profile: {},
     channels: [
       {
         id: "c9a22d1c-6cb6-4b7f-9e4c-5a9c7f0b7c8c",

@@ -1,11 +1,42 @@
-import { component$, Slot } from "@builder.io/qwik";
-import { routeLoader$, type RequestHandler } from "@builder.io/qwik-city";
+import { component$, NoSerialize, noSerialize, Slot } from "@builder.io/qwik";
+import {
+  RequestEvent,
+  routeLoader$,
+  useLocation,
+  type RequestHandler,
+} from "@builder.io/qwik-city";
+import { SupabaseClient } from "@supabase/supabase-js";
 import Sidebar from "~/components/sidebar";
+import {
+  createBrowserClient,
+  createServerClient,
+} from "~/components/supabase/supabase-auth-helpers-qwik";
 import useDataProvider from "~/components/use-data-provider";
-import UseSupabaseProvider from "~/components/use-supabase-provider";
 import useSupabaseProvider from "~/components/use-supabase-provider";
-import UseUiProvider, { UIContext } from "~/components/use-ui-provider";
-import useUiProvider from "~/components/use-ui-provider";
+import useUiProvider, { UIContext } from "~/components/use-ui-provider";
+
+async function isLoggedIn(ev: RequestEvent) {
+  const supabase = createServerClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    ev,
+  );
+  const user = await supabase.auth.getUser();
+
+  return user.data.user ? true : false;
+}
+
+export const onRequest: RequestHandler = async (ev) => {
+  const logged_in = await isLoggedIn(ev);
+  console.log("logged_in", logged_in);
+  if (!logged_in && ev.url.pathname !== "/login/") {
+    throw ev.redirect(308, "/login/");
+  }
+
+  if (logged_in && ev.url.pathname === "/login/") {
+    throw ev.redirect(308, "/");
+  }
+};
 
 export const onGet: RequestHandler = async ({ cacheControl }) => {
   // Control caching for this request for best performance and to reduce hosting costs:
@@ -31,10 +62,13 @@ export const useUI = routeLoader$<UIContext>(({ sharedMap, cookie }) => {
 });
 
 export default component$(() => {
+  const loc = useLocation();
   const ui = useUI();
   useUiProvider(ui.value);
   useSupabaseProvider();
   useDataProvider();
+
+  if (loc.url.pathname === "/login/") return <Slot />;
 
   return (
     <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">

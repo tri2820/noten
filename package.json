@@ -46,6 +46,7 @@
     "prettier-plugin-tailwindcss": "^0.5.4",
     "tailwind-scrollbar": "^3.0.5",
     "tailwindcss": "3.3.3",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "5.4.5",
     "undici": "*",
     "vite": "5.3.5",

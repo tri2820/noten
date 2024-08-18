@@ -3,6 +3,7 @@ import { type DocumentHead } from "@builder.io/qwik-city";
 import TipTap from "~/components/tip-tap";
 import TopBar from "~/components/top-bar";
 import { UIContext } from "~/components/use-ui-provider";
+import { HEAD } from "~/utils";
 
 export default component$(() => {
   const ui = useContext(UIContext);
@@ -49,12 +50,4 @@ export default component$(() => {
   );
 });
 
-export const head: DocumentHead = {
-  title: "Noten - Note App for Filen",
-  meta: [
-    {
-      name: "description",
-      content: "The note app Filen users deserve.",
-    },
-  ],
-};
+export const head: DocumentHead = HEAD;

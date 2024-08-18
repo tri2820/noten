@@ -5,8 +5,10 @@ import { BsBookmarkFill, BsChatFill } from "@qwikest/icons/bootstrap";
 import chatSidebar from "./chat-sidebar";
 import librarySidebar from "./library-sidebar";
 import { UIContext } from "./use-ui-provider";
+import { SupabaseContext } from "./use-supabase-provider";
 
 export default component$(() => {
+  const supabase = useContext(SupabaseContext);
   const ui = useContext(UIContext);
   const S = useComputed$(() => {
     return {
@@ -36,7 +38,7 @@ export default component$(() => {
         </div>
       </S.value>
 
-      <div class="flex w-full items-center space-x-6 py-4">
+      <div class="flex w-full items-center space-x-6 p-4">
         <div class="flex-1" />
         <button
           onClick$={() => {
@@ -55,6 +57,13 @@ export default component$(() => {
           <BsChatFill />
         </button>
         <div class="flex-1" />
+
+        {supabase.profile && (
+          <img
+            class="h-8 w-8 rounded-lg border"
+            src={supabase.profile.avatar}
+          />
+        )}
       </div>
     </div>
   );
