@@ -28,7 +28,6 @@ async function isLoggedIn(ev: RequestEvent) {
 
 export const onRequest: RequestHandler = async (ev) => {
   const logged_in = await isLoggedIn(ev);
-  console.log("logged_in", logged_in);
   if (!logged_in && ev.url.pathname !== "/login/") {
     throw ev.redirect(308, "/login/");
   }
