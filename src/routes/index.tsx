@@ -7,7 +7,9 @@ import { HEAD } from "~/utils";
 export default component$(() => {
   return (
     <div class="flex h-screen flex-1 flex-col overflow-hidden bg-white dark:bg-neutral-900">
-      <TopBar name="Home" />
+      <TopBar>
+        <div class="text-lg font-medium">Home</div>
+      </TopBar>
 
       <div class="flex flex-1 flex-col overflow-y-auto"></div>
     </div>

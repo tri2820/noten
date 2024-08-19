@@ -52,11 +52,13 @@ export default class {
       Y.applyUpdate(document, update);
     }
 
+    // On DB change
     // this.reload_from_db_interval = setInterval(async () => {
     //   const state = await onIntervalReload?.();
     //   if (state) {
     //     console.log("reload got state", state);
     //     // How to apply state
+    // -> editor.commands.setContent
     //   }
     // }, 5000);
   }
@@ -66,6 +68,7 @@ export default class {
     this.doc.destroy();
     this.awareness.destroy();
     this.channel.unsubscribe();
+    clearTimeout(this.save_to_db_timeout);
   }
 
   private onAwarenessUpdate({ added, updated, removed }: any, origin: any) {
@@ -98,6 +101,7 @@ export default class {
     this.save_to_db_timeout = setTimeout(async () => {
       const m = Y.encodeStateAsUpdate(this.doc);
       const state = bytesToHex(m);
+      console.log("call with id", this.id);
       this.onSave?.(state);
     }, 500);
   }

@@ -174,7 +174,7 @@ const TextChannelView = component$((_: { channel: Channel }) => {
               {messages.value.map((message) => (
                 <div
                   key={message.id}
-                  class="flex cursor-pointer items-start space-x-4 px-8 py-4 hover:bg-neutral-100 hover:dark:bg-neutral-800"
+                  class="bg-hover flex cursor-pointer items-start space-x-4 px-8 py-4"
                 >
                   <Avatar src={localData.profile[message.author_id]?.avatar} />
                   <div class="flex-1 space-y-1">
@@ -270,7 +270,9 @@ export default component$(() => {
       data-ctype={store.channel.type}
       class="flex h-screen flex-1 flex-col overflow-hidden  data-[ctype=text]:bg-white data-[ctype=voice]:bg-neutral-200 data-[ctype=text]:dark:bg-neutral-900 data-[ctype=voice]:dark:bg-black"
     >
-      <TopBar name={store.channel.name} />
+      <TopBar>
+        <div class="text-lg font-medium">{store.channel.name}</div>
+      </TopBar>
 
       {store.channel.type == "text" ? (
         <TextChannelView channel={store.channel} />

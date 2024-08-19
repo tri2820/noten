@@ -1,4 +1,6 @@
 import {
+  noSerialize,
+  NoSerialize,
   render,
   Signal,
   useContext,
@@ -81,9 +83,17 @@ export const renderCursor = (user: any) => {
 
 export default (ref: Signal<HTMLElement | undefined>) => {
   const localData = useContext(LocalDataContext);
-  const editorState = useContext(EditorStateContext);
-  const store = useStore<{ state?: string; ready: boolean }>({
+  const store = useStore<{
+    init_state?: {
+      data: string;
+      doc_id: string;
+    };
+    ready: boolean;
+    loading: boolean;
+    editor?: NoSerialize<Editor>;
+  }>({
     ready: false,
+    loading: false,
   });
   const supabase = useContext(SupabaseContext);
 
@@ -92,31 +102,39 @@ export default (ref: Signal<HTMLElement | undefined>) => {
     const user = track(() => supabase.user);
     const element = track(ref);
     const id = track(localData.note_id);
-    const state = track(() => store.state);
+    const init_state = track(() => store.init_state);
     const ready = track(() => store.ready);
 
     if (!client) return;
     if (!user) return;
     if (!element) return;
     if (!id) return;
+    if (!init_state) return;
+    if (init_state.doc_id != id) return;
 
     // reset state
-    editorState.loading = false;
+    store.loading = false;
 
     let provider: TiptapCollabProvider | undefined;
     if (ready) {
-      provider = new TiptapCollabProvider(client, id, state, async (state) => {
-        console.log("saving...");
-        editorState.loading = true;
-        await (async () => {
-          const _update = await client
-            .from("note")
-            .update({ state })
-            .eq("id", id);
-          console.log("_update", _update);
-        })();
-        editorState.loading = false;
-      });
+      console.log("create provider instance", id);
+      provider = new TiptapCollabProvider(
+        client,
+        id,
+        init_state.data,
+        async (state) => {
+          console.log("saving...");
+          store.loading = true;
+          await (async () => {
+            const _update = await client
+              .from("note")
+              .update({ state })
+              .eq("id", id);
+            // console.log("update note in db:", id, state);
+          })();
+          store.loading = false;
+        },
+      );
     }
 
     console.log("creating...", ready, provider);
@@ -157,9 +175,12 @@ export default (ref: Signal<HTMLElement | undefined>) => {
       },
     });
 
+    store.editor = noSerialize(editor);
+
     cleanup(() => {
       editor.destroy();
       provider?.destroy();
+      store.editor = undefined;
     });
   });
 
