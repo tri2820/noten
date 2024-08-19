@@ -12,46 +12,64 @@ import TopBar from "~/components/top-bar";
 import { HEAD } from "~/utils";
 import useTipTap from "~/components/use-tip-tap";
 import { UIContext } from "~/components/ui-provider";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseContext } from "~/components/supabase-provider";
 
 export default component$(() => {
   const loc = useLocation();
   const content = useComputed$(() => `Hey ${loc.params.id}`);
   const ui = useContext(UIContext);
   const ref = useSignal<HTMLElement>();
-  const state = useTipTap(ref);
+  const tiptap = useTipTap(ref);
+  const supabase = useContext(SupabaseContext);
 
-  useVisibleTask$(({ track }) => {
+  useVisibleTask$(async ({ track }) => {
     const l = track(loc);
-    state.content = `
-     <h2>
-      Hi there ${l.params.id},
-    </h2>
-    <p>
-      this is a basic <em>basic</em> example of <strong>Tiptap</strong>. Sure, there are all kind of basic text styles you’d probably expect from a text editor. But wait until you see the lists:
-    </p>
-    <ul>
-      <li>
-        That’s a bullet list with one …
-      </li>
-      <li>
-        … or two list items.
-      </li>
-    </ul>
-    <p>
-      Isn’t that great? And all of that is editable. But wait, there’s more. Let’s try a code block:
-    </p>
-<pre><code class="language-css">body {
-  display: none;
-}</code></pre>
-    <p>
-      I know, I know, this is impressive. It’s only the tip of the iceberg though. Give it a try and click a little bit around. Don’t forget to check the other examples too.
-    </p>
-    <blockquote>
-      Wow, that’s amazing. Good work, boy! 👏
-      <br />
-      — Mom
-    </blockquote>
-    `;
+    const client = track(() => supabase.client);
+    if (!client) return;
+
+    const _select = await client
+      .from("note")
+      .select()
+      .eq("id", l.params.id)
+      .single();
+    if (_select.error) {
+      console.error("Error getting note", _select.error);
+      return;
+    }
+
+    tiptap.state = _select.data.state;
+    tiptap.ready = true;
+    // tiptap.state = `
+    //      <h2>
+    //       Hi there ${l.params.id},
+    //     </h2>
+    //     <p>
+    //       this is a basic <em>basic</em> example of <strong>Tiptap</strong>. Sure, there are all kind of basic text styles you’d probably expect from a text editor. But wait until you see the lists:
+    //     </p>
+    //     <ul>
+    //       <li>
+    //         That’s a bullet list with one …
+    //       </li>
+    //       <li>
+    //         … or two list items.
+    //       </li>
+    //     </ul>
+    //     <p>
+    //       Isn’t that great? And all of that is editable. But wait, there’s more. Let’s try a code block:
+    //     </p>
+    // <pre><code class="language-css">body {
+    //   display: none;
+    // }</code></pre>
+    //     <p>
+    //       I know, I know, this is impressive. It’s only the tip of the iceberg though. Give it a try and click a little bit around. Don’t forget to check the other examples too.
+    //     </p>
+    //     <blockquote>
+    //       Wow, that’s amazing. Good work, boy! 👏
+    //       <br />
+    //       — Mom
+    //     </blockquote>
+    //     `;
   });
 
   return (
@@ -59,7 +77,7 @@ export default component$(() => {
       <TopBar name={"Just a note"} />
 
       <div class="flex flex-1 flex-col overflow-y-auto">
-        <div ref={ref} class="flex flex-1 flex-col" />;
+        <div ref={ref} class="flex flex-1 flex-col" />
       </div>
     </div>
   );

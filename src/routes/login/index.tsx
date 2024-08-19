@@ -1,15 +1,9 @@
-import {
-  $,
-  component$,
-  useContext,
-  useSignal,
-  useVisibleTask$,
-} from "@builder.io/qwik";
+import { $, component$, useContext, useSignal } from "@builder.io/qwik";
 import { DocumentHead, useNavigate } from "@builder.io/qwik-city";
+import { LuLoader2 } from "@qwikest/icons/lucide";
+import ExampleAvatar from "~/components/example-avatar.txt?raw";
 import { SupabaseContext } from "~/components/supabase-provider";
 import { HEAD } from "~/utils";
-import ExampleAvatar from "~/components/example-avatar.txt?raw";
-import { LuLoader } from "@qwikest/icons/lucide";
 
 export default component$(() => {
   const supabase = useContext(SupabaseContext);
@@ -67,7 +61,7 @@ export default component$(() => {
             class=" flex w-full flex-col items-center rounded bg-orange-500 px-8 py-4 font-semibold enabled:hover:bg-orange-600 disabled:opacity-40"
           >
             {loading.value ? (
-              <LuLoader class="h-6 w-6 animate-spin" />
+              <LuLoader2 class="h-6 w-6 animate-spin" />
             ) : (
               "Continue"
             )}

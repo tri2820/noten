@@ -5,11 +5,12 @@ import {
   useLocation,
   type RequestHandler,
 } from "@builder.io/qwik-city";
-import DataProvider from "~/components/data-provider";
+import DataProvider from "~/components/local-data-provider";
 import Sidebar from "~/components/sidebar";
 import { createServerClient } from "~/components/supabase/supabase-auth-helpers-qwik";
 import UiProvider, { UIContext } from "~/components/ui-provider";
 import { SupabaseProvider } from "~/components/supabase-provider";
+import EditorStateProvider from "~/components/editor-state-provider";
 
 async function isLoggedIn(ev: RequestEvent) {
   const supabase = createServerClient(
@@ -64,16 +65,18 @@ export default component$(() => {
     <DataProvider>
       <UiProvider ui={ui.value}>
         <SupabaseProvider>
-          {loc.url.pathname === "/login/" ? (
-            <Slot />
-          ) : (
-            <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">
-              <div class="flex items-start">
-                <Sidebar />
-                <Slot />
+          <EditorStateProvider>
+            {loc.url.pathname === "/login/" ? (
+              <Slot />
+            ) : (
+              <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">
+                <div class="flex items-start">
+                  <Sidebar />
+                  <Slot />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </EditorStateProvider>
         </SupabaseProvider>
       </UiProvider>
     </DataProvider>

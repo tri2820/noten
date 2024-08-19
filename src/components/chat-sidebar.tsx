@@ -7,7 +7,7 @@ import {
 } from "@builder.io/qwik";
 import { Link, useLocation } from "@builder.io/qwik-city";
 import { LuHash, LuPlus, LuVolume2 } from "@qwikest/icons/lucide";
-import { DataContext } from "./data-provider";
+import { LocalDataContext } from "./local-data-provider";
 
 export type Channel = {
   id: string;
@@ -33,7 +33,7 @@ export default component$(() => {
     const regex = /^\/channel\/[a-f0-9-]+\//i;
     if (regex.test(loc.url.pathname)) return loc.params.id;
   });
-  const data = useContext(DataContext);
+  const localData = useContext(LocalDataContext);
 
   return (
     <>
@@ -46,7 +46,7 @@ export default component$(() => {
             <LuPlus class="h-4 w-4 flex-none" />
           </button>
           <div>
-            {data.channels
+            {localData.channels
               .filter((channel) => channel.type === "text")
               .map((channel) => (
                 <div
@@ -71,11 +71,11 @@ export default component$(() => {
 
         <div class="space-y-2 ">
           <button class="text-hover flex flex-none items-center space-x-2">
-            <div class="flex-none text-xs ">TEXT CHANNELS</div>
+            <div class="flex-none text-xs ">VOICE CHANNELS</div>
             <LuPlus class="h-4 w-4 flex-none" />
           </button>
           <div class="">
-            {data.channels
+            {localData.channels
               .filter((channel) => channel.type === "voice")
               .map((channel) => (
                 <div

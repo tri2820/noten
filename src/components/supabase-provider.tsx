@@ -21,7 +21,7 @@ import {
   createBrowserClient,
   createServerClient,
 } from "./supabase/supabase-auth-helpers-qwik";
-import { DataContext } from "./data-provider";
+import { LocalDataContext } from "./local-data-provider";
 import { profile } from "console";
 
 type SupabaseContext = {
@@ -32,9 +32,26 @@ type SupabaseContext = {
 
 export const SupabaseContext = createContextId<SupabaseContext>("supabase");
 export const SupabaseProvider = component$(() => {
-  const data = useContext(DataContext);
+  const localData = useContext(LocalDataContext);
   const store = useStore<SupabaseContext>({});
   useContextProvider(SupabaseContext, store);
+
+  const load_profile = $(async (client: SupabaseClient, user: User) => {
+    const _select = await client
+      .from("profile")
+      .select()
+      .eq("id", user.id)
+      .single();
+    store.profile = _select.data;
+    if (!_select.data) return;
+    localData.profile[_select.data.id] = _select.data;
+  });
+
+  const load_notes = $(async (client: SupabaseClient) => {
+    const _select = await client.from("note").select();
+    if (!_select.data) return;
+    localData.notes = _select.data;
+  });
 
   useVisibleTask$(
     () => {
@@ -45,7 +62,7 @@ export const SupabaseProvider = component$(() => {
       );
       store.client = noSerialize(client);
       client.auth.onAuthStateChange(async (ev, session) => {
-        console.log("onAuth", ev, session);
+        // console.log("onAuth", ev, session);
         const user = session?.user;
 
         if (
@@ -54,24 +71,14 @@ export const SupabaseProvider = component$(() => {
           ev === "USER_UPDATED"
         ) {
           store.user = noSerialize(user);
-          (async () => {
-            if (!user) {
-              console.log("no user");
-              store.profile = undefined;
-              return;
-            }
+          if (!user) {
+            console.log("no user");
+            store.profile = undefined;
+            return;
+          }
 
-            console.log("get profile...", user);
-            const _select = await client
-              .from("profile")
-              .select()
-              .eq("id", user.id)
-              .single();
-            store.profile = _select.data;
-            console.log("got profile", _select.data);
-            if (!_select.data) return;
-            data.profile[_select.data.id] = _select.data;
-          })();
+          load_profile(client, user);
+          load_notes(client);
         }
       });
     },

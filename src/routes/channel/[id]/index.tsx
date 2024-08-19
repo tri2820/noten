@@ -13,7 +13,7 @@ import { LuChevronsDown } from "@qwikest/icons/lucide";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Avatar from "~/components/avatar";
 import { Channel } from "~/components/chat-sidebar";
-import { DataContext } from "~/components/data-provider";
+import { LocalDataContext } from "~/components/local-data-provider";
 import PendingMessages from "~/components/pending-messages";
 import PendingText from "~/components/pending-text";
 import { SupabaseContext } from "~/components/supabase-provider";
@@ -21,14 +21,14 @@ import TopBar from "~/components/top-bar";
 import { dateF, HEAD } from "~/utils";
 
 const TextChannelView = component$((_: { channel: Channel }) => {
-  const data = useContext(DataContext);
+  const localData = useContext(LocalDataContext);
   const pinned_to_bottom = useSignal(true);
   const supabase = useContext(SupabaseContext);
   const messages = useSignal<any[] | undefined>();
 
   const after_insert = $(async (client: SupabaseClient, row: any) => {
     const profile =
-      data.profile[row.author_id] ??
+      localData.profile[row.author_id] ??
       (await client.from("profile").select().eq("id", row.author_id).single())
         .data;
 
@@ -37,8 +37,8 @@ const TextChannelView = component$((_: { channel: Channel }) => {
       return;
     }
 
-    data.profile = {
-      ...data.profile,
+    localData.profile = {
+      ...localData.profile,
       [profile.id]: profile,
     };
   });
@@ -66,7 +66,7 @@ const TextChannelView = component$((_: { channel: Channel }) => {
       }
 
       _select_profiles.data.forEach((p) => {
-        data.profile[p.id] = p;
+        localData.profile[p.id] = p;
       });
     })();
 
@@ -177,11 +177,11 @@ const TextChannelView = component$((_: { channel: Channel }) => {
                   key={message.id}
                   class="flex cursor-pointer items-start space-x-4 px-8 py-4 hover:bg-neutral-100 hover:dark:bg-neutral-800"
                 >
-                  <Avatar src={data.profile[message.author_id]?.avatar} />
+                  <Avatar src={localData.profile[message.author_id]?.avatar} />
                   <div class="flex-1 space-y-1">
                     <div class="font-semibold">
                       <PendingText
-                        value={data.profile[message.author_id]?.name}
+                        value={localData.profile[message.author_id]?.name}
                       />
                       <span class="ml-2 text-xs font-normal text-neutral-500 dark:text-neutral-400">
                         {dateF(message.created_at)}
@@ -247,14 +247,14 @@ const TextChannelView = component$((_: { channel: Channel }) => {
 
 export default component$(() => {
   const loc = useLocation();
-  const data = useContext(DataContext);
+  const localData = useContext(LocalDataContext);
   const store = useStore<{
     channel?: Channel;
   }>({});
 
   useVisibleTask$(({ track, cleanup }) => {
     track(loc);
-    const c = data.channels.find((x) => x.id == loc.params.id);
+    const c = localData.channels.find((x) => x.id == loc.params.id);
     if (!c) return;
     store.channel = c;
     cleanup(() => {

@@ -17,7 +17,6 @@ export default component$(() => {
         const _theme = document.documentElement.className;
         const nextTheme = _theme === "light" ? "dark" : "light";
         document.documentElement.className = nextTheme;
-        localStorage.setItem("theme", nextTheme);
         ui.theme = nextTheme;
       }}
     >
