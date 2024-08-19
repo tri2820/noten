@@ -29,6 +29,7 @@ export default component$(() => {
     // await c.auth.refreshSession();
 
     nav("/");
+    return true;
   });
 
   return (
@@ -55,7 +56,8 @@ export default component$(() => {
             }
             onClick$={async () => {
               loading.value = true;
-              await createAnonAccount();
+              const should_wait = await createAnonAccount();
+              if (should_wait) return;
               loading.value = false;
             }}
             class=" flex w-full flex-col items-center rounded bg-orange-500 px-8 py-4 font-semibold enabled:hover:bg-orange-600 disabled:opacity-40"
