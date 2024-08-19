@@ -6,7 +6,7 @@ import {
   useVisibleTask$,
 } from "@builder.io/qwik";
 import { DocumentHead, useNavigate } from "@builder.io/qwik-city";
-import { SupabaseContext } from "~/components/use-supabase-provider";
+import { SupabaseContext } from "~/components/supabase-provider";
 import { HEAD } from "~/utils";
 import ExampleAvatar from "~/components/example-avatar.txt?raw";
 import { LuLoader } from "@qwikest/icons/lucide";

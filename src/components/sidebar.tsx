@@ -5,7 +5,7 @@ import { BsBookmarkFill, BsChatFill } from "@qwikest/icons/bootstrap";
 import chatSidebar from "./chat-sidebar";
 import librarySidebar from "./library-sidebar";
 import { UIContext } from "./ui-provider";
-import { SupabaseContext } from "./use-supabase-provider";
+import { SupabaseContext } from "./supabase-provider";
 import Avatar from "./avatar";
 
 export default component$(() => {

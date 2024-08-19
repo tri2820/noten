@@ -9,7 +9,7 @@ import DataProvider from "~/components/data-provider";
 import Sidebar from "~/components/sidebar";
 import { createServerClient } from "~/components/supabase/supabase-auth-helpers-qwik";
 import UiProvider, { UIContext } from "~/components/ui-provider";
-import { SupabaseProvider } from "~/components/use-supabase-provider";
+import { SupabaseProvider } from "~/components/supabase-provider";
 
 async function isLoggedIn(ev: RequestEvent) {
   const supabase = createServerClient(

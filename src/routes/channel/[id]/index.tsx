@@ -1,8 +1,6 @@
 import {
   $,
   component$,
-  Signal,
-  useComputed$,
   useContext,
   useSignal,
   useStore,
@@ -11,92 +9,103 @@ import {
 } from "@builder.io/qwik";
 import { useLocation, type DocumentHead } from "@builder.io/qwik-city";
 import { BsSendFill } from "@qwikest/icons/bootstrap";
-import { LuChevronDown, LuChevronsDown } from "@qwikest/icons/lucide";
+import { LuChevronsDown } from "@qwikest/icons/lucide";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Avatar from "~/components/avatar";
 import { Channel } from "~/components/chat-sidebar";
+import { DataContext } from "~/components/data-provider";
 import PendingMessages from "~/components/pending-messages";
 import PendingText from "~/components/pending-text";
+import { SupabaseContext } from "~/components/supabase-provider";
 import TopBar from "~/components/top-bar";
-import { DataContext } from "~/components/data-provider";
-import {
-  SupabaseContext,
-  useSupabaseRealtime,
-} from "~/components/use-supabase-provider";
 import { dateF, HEAD } from "~/utils";
 
 const TextChannelView = component$((_: { channel: Channel }) => {
   const data = useContext(DataContext);
   const pinned_to_bottom = useSignal(true);
-  const realtime = useSupabaseRealtime<{
-    id: string;
-    content: string;
-    created_at: string;
-    author_id: string;
-  }>();
+  const supabase = useContext(SupabaseContext);
+  const messages = useSignal<any[] | undefined>();
 
-  useVisibleTask$(({ track }) => {
-    track(() => _.channel);
-    console.log("set store opts", _.channel);
-    realtime.state.opts = {
-      table: "message",
-      filter: `thread_id=eq.${_.channel.id}`,
-      load: $(async (client: SupabaseClient) => {
-        const _select = await client
-          .from("message")
-          .select("*")
-          .eq("thread_id", _.channel.id);
+  const after_insert = $(async (client: SupabaseClient, row: any) => {
+    const profile =
+      data.profile[row.author_id] ??
+      (await client.from("profile").select().eq("id", row.author_id).single())
+        .data;
 
-        if (_select.error) {
-          console.warn("error", _select.error);
-          return [];
-        }
+    if (!profile) {
+      console.error("Cannot get profile for message", row);
+      return;
+    }
 
-        (async () => {
-          const profile_ids = _select.data.map((m) => m.author_id);
-          const _select_profiles = await client
-            .from("profile")
-            .select("*")
-            .in("id", profile_ids);
-          if (_select_profiles.error) {
-            console.error("error", _select_profiles.error);
-            return;
-          }
-
-          _select_profiles.data.forEach((p) => {
-            data.profile[p.id] = p;
-          });
-        })();
-
-        return _select.data;
-      }),
-      after_insert: $(async (client: SupabaseClient, row: any) => {
-        const profile =
-          data.profile[row.author_id] ??
-          (
-            await client
-              .from("profile")
-              .select()
-              .eq("id", row.author_id)
-              .single()
-          ).data;
-
-        if (!profile) {
-          console.error("Cannot get profile for message", row);
-          return;
-        }
-
-        data.profile = {
-          ...data.profile,
-          [profile.id]: profile,
-        };
-      }),
+    data.profile = {
+      ...data.profile,
+      [profile.id]: profile,
     };
+  });
+
+  const load = $(async (client: SupabaseClient) => {
+    const _select = await client
+      .from("message")
+      .select("*")
+      .eq("thread_id", _.channel.id);
+
+    if (_select.error) {
+      console.warn("error", _select.error);
+      return [];
+    }
+
+    (async () => {
+      const profile_ids = _select.data.map((m) => m.author_id);
+      const _select_profiles = await client
+        .from("profile")
+        .select("*")
+        .in("id", profile_ids);
+      if (_select_profiles.error) {
+        console.error("error", _select_profiles.error);
+        return;
+      }
+
+      _select_profiles.data.forEach((p) => {
+        data.profile[p.id] = p;
+      });
+    })();
+
+    return _select.data;
+  });
+
+  useVisibleTask$(async ({ track, cleanup }) => {
+    track(() => _.channel.id);
+    const client = track(() => supabase.client);
+    if (!client) return;
+    messages.value = await load(client);
+    client
+      .channel("db-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "message",
+          filter: `thread_id=eq.${_.channel.id}`,
+        },
+        async (payload) => {
+          if (!messages.value) return;
+          const m = payload.new;
+          messages.value = [...messages.value, m];
+          after_insert(client, m);
+        },
+      )
+      // TODO: handle UPDATE, DELETE
+      .subscribe();
+
+    cleanup(() => {
+      messages.value = undefined;
+      // it seems that the handle is automatically cleaned somehow?
+    });
   });
 
   const ref = useSignal<HTMLElement>();
 
-  const supabase = useContext(SupabaseContext);
   const input = useSignal("");
   const submit = $(async () => {
     if (!input.value) return;
@@ -129,8 +138,6 @@ const TextChannelView = component$((_: { channel: Channel }) => {
     const pinned = track(pinned_to_bottom);
     const r = track(ref);
 
-    console.log("observe...", pinned);
-
     if (!pinned) return;
     if (!r) return;
 
@@ -160,12 +167,12 @@ const TextChannelView = component$((_: { channel: Channel }) => {
   return (
     <>
       <div class="flex-1 overflow-y-auto overflow-x-hidden pb-4" ref={ref}>
-        {realtime.rows.value ? (
-          realtime.rows.value.length == 0 ? (
+        {messages.value ? (
+          messages.value.length == 0 ? (
             <div class="px-8 py-4 text-sm text-neutral-500">No messages</div>
           ) : (
             <div>
-              {realtime.rows.value.map((message) => (
+              {messages.value.map((message) => (
                 <div
                   key={message.id}
                   class="flex cursor-pointer items-start space-x-4 px-8 py-4 hover:bg-neutral-100 hover:dark:bg-neutral-800"
