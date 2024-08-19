@@ -96,10 +96,8 @@ export default component$(() => {
   return (
     <div class="flex h-screen flex-1 flex-col overflow-hidden bg-white dark:bg-neutral-900">
       <TopBar>
-        <div class="flex items-center space-x-2">
-          <div class="text-lg font-medium">{note.value?.name}</div>
-          {tiptap.loading && <LuLoader2 class="h-4 w-4 animate-spin" />}
-        </div>
+        <div class="text-lg font-medium">{note.value?.name}</div>
+        {tiptap.loading && <LuLoader2 class="h-4 w-4 animate-spin" />}
       </TopBar>
 
       <div class="flex flex-1 flex-col overflow-y-auto">
