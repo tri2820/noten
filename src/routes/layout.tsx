@@ -1,19 +1,15 @@
-import { component$, NoSerialize, noSerialize, Slot } from "@builder.io/qwik";
+import { component$, Slot } from "@builder.io/qwik";
 import {
   RequestEvent,
   routeLoader$,
   useLocation,
   type RequestHandler,
 } from "@builder.io/qwik-city";
-import { SupabaseClient } from "@supabase/supabase-js";
+import DataProvider from "~/components/data-provider";
 import Sidebar from "~/components/sidebar";
-import {
-  createBrowserClient,
-  createServerClient,
-} from "~/components/supabase/supabase-auth-helpers-qwik";
-import useDataProvider from "~/components/use-data-provider";
-import useSupabaseProvider from "~/components/use-supabase-provider";
-import useUiProvider, { UIContext } from "~/components/use-ui-provider";
+import { createServerClient } from "~/components/supabase/supabase-auth-helpers-qwik";
+import UiProvider, { UIContext } from "~/components/ui-provider";
+import { SupabaseProvider } from "~/components/use-supabase-provider";
 
 async function isLoggedIn(ev: RequestEvent) {
   const supabase = createServerClient(
@@ -48,7 +44,7 @@ export const onGet: RequestHandler = async ({ cacheControl }) => {
   });
 };
 
-export const useUI = routeLoader$<UIContext>(({ sharedMap, cookie }) => {
+export const useUICookie = routeLoader$<UIContext>(({ sharedMap, cookie }) => {
   const ui: UIContext | undefined = cookie.get("ui")?.json();
   if (!ui)
     return {
@@ -61,20 +57,25 @@ export const useUI = routeLoader$<UIContext>(({ sharedMap, cookie }) => {
 });
 
 export default component$(() => {
-  useDataProvider();
-  useSupabaseProvider();
-  const ui = useUI();
-  useUiProvider(ui.value);
+  const ui = useUICookie();
 
   const loc = useLocation();
-  if (loc.url.pathname === "/login/") return <Slot />;
-
   return (
-    <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">
-      <div class="flex items-start">
-        <Sidebar />
-        <Slot />
-      </div>
-    </div>
+    <DataProvider>
+      <UiProvider ui={ui.value}>
+        <SupabaseProvider>
+          {loc.url.pathname === "/login/" ? (
+            <Slot />
+          ) : (
+            <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">
+              <div class="flex items-start">
+                <Sidebar />
+                <Slot />
+              </div>
+            </div>
+          )}
+        </SupabaseProvider>
+      </UiProvider>
+    </DataProvider>
   );
 });

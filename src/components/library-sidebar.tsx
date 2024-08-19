@@ -2,7 +2,7 @@ import { component$, Slot, useContext, useSignal } from "@builder.io/qwik";
 import { LuPlus } from "@qwikest/icons/lucide";
 import Twemoji from "./twemoji";
 import { Link } from "@builder.io/qwik-city";
-import { DataContext } from "./use-data-provider";
+import { DataContext } from "./data-provider";
 
 export type Note = {
   id: string;

@@ -5,7 +5,7 @@ import {
   useVisibleTask$,
 } from "@builder.io/qwik";
 import { LuMoon, LuSun } from "@qwikest/icons/lucide";
-import { UIContext } from "./use-ui-provider";
+import { UIContext } from "./ui-provider";
 
 export default component$(() => {
   const ui = useContext(UIContext);

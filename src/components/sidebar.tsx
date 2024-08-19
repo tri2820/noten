@@ -4,7 +4,7 @@ import { LuPanelLeftClose } from "@qwikest/icons/lucide";
 import { BsBookmarkFill, BsChatFill } from "@qwikest/icons/bootstrap";
 import chatSidebar from "./chat-sidebar";
 import librarySidebar from "./library-sidebar";
-import { UIContext } from "./use-ui-provider";
+import { UIContext } from "./ui-provider";
 import { SupabaseContext } from "./use-supabase-provider";
 import Avatar from "./avatar";
 

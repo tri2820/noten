@@ -26,10 +26,13 @@ export default component$(() => {
       return;
     }
 
+    console.log("insert profile");
     await c.from("profile").insert({
       avatar: ExampleAvatar,
       name: name.value,
     });
+
+    // await c.auth.refreshSession();
 
     nav("/");
   });
@@ -53,7 +56,9 @@ export default component$(() => {
           </div>
 
           <button
-            disabled={name.value == ""}
+            disabled={
+              name.value == "" || loading.value == true || !supabase.client
+            }
             onClick$={async () => {
               loading.value = true;
               await createAnonAccount();

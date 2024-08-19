@@ -8,9 +8,10 @@ import {
 import { useLocation, type DocumentHead } from "@builder.io/qwik-city";
 import TipTap from "~/components/use-tip-tap";
 import TopBar from "~/components/top-bar";
-import { UIContext } from "~/components/use-ui-provider";
+
 import { HEAD } from "~/utils";
 import useTipTap from "~/components/use-tip-tap";
+import { UIContext } from "~/components/ui-provider";
 
 export default component$(() => {
   const loc = useLocation();

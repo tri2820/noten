@@ -1,21 +1,24 @@
 import {
   $,
   component$,
+  Signal,
   useComputed$,
   useContext,
   useSignal,
   useStore,
+  useTask$,
   useVisibleTask$,
 } from "@builder.io/qwik";
 import { useLocation, type DocumentHead } from "@builder.io/qwik-city";
 import { BsSendFill } from "@qwikest/icons/bootstrap";
+import { LuChevronDown, LuChevronsDown } from "@qwikest/icons/lucide";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Avatar from "~/components/avatar";
 import { Channel } from "~/components/chat-sidebar";
 import PendingMessages from "~/components/pending-messages";
 import PendingText from "~/components/pending-text";
 import TopBar from "~/components/top-bar";
-import { DataContext } from "~/components/use-data-provider";
+import { DataContext } from "~/components/data-provider";
 import {
   SupabaseContext,
   useSupabaseRealtime,
@@ -24,12 +27,8 @@ import { dateF, HEAD } from "~/utils";
 
 const TextChannelView = component$((_: { channel: Channel }) => {
   const data = useContext(DataContext);
-  const {
-    rows: messages,
-    loaded,
-    latest_inserted,
-    store,
-  } = useSupabaseRealtime<{
+  const pinned_to_bottom = useSignal(true);
+  const realtime = useSupabaseRealtime<{
     id: string;
     content: string;
     created_at: string;
@@ -38,8 +37,8 @@ const TextChannelView = component$((_: { channel: Channel }) => {
 
   useVisibleTask$(({ track }) => {
     track(() => _.channel);
-    console.log("set store opts");
-    store.opts = {
+    console.log("set store opts", _.channel);
+    realtime.state.opts = {
       table: "message",
       filter: `thread_id=eq.${_.channel.id}`,
       load: $(async (client: SupabaseClient) => {
@@ -71,7 +70,7 @@ const TextChannelView = component$((_: { channel: Channel }) => {
 
         return _select.data;
       }),
-      modify_row: $(async (client: SupabaseClient, row: any) => {
+      after_insert: $(async (client: SupabaseClient, row: any) => {
         const profile =
           data.profile[row.author_id] ??
           (
@@ -82,19 +81,14 @@ const TextChannelView = component$((_: { channel: Channel }) => {
               .single()
           ).data;
 
-        data.profile = {
-          ...data.profile,
-          [profile.id]: profile,
-        };
-
         if (!profile) {
           console.error("Cannot get profile for message", row);
           return;
         }
 
-        return {
-          ...row,
-          profile,
+        data.profile = {
+          ...data.profile,
+          [profile.id]: profile,
         };
       }),
     };
@@ -111,37 +105,67 @@ const TextChannelView = component$((_: { channel: Channel }) => {
       content: input.value,
     });
     input.value = "";
+    pinned_to_bottom.value = true;
   });
 
-  useVisibleTask$(({ track }) => {
-    track(latest_inserted);
-    // TODO: Only if the latest_inserted's author is me, do I scroll
-    // Else, show number of new messages and show hint to scroll
-    ref.value!.scrollTo({
-      top: ref.value!.scrollHeight,
-      behavior: "smooth",
+  useVisibleTask$(({ track, cleanup }) => {
+    const r = track(ref);
+    if (!r) return;
+
+    const scrollHandler = () => {
+      const scrollTop = r.scrollTop;
+      const scrollHeight = r.scrollHeight - r.clientHeight;
+
+      pinned_to_bottom.value = scrollTop > scrollHeight - 50;
+    };
+
+    r.addEventListener("scroll", scrollHandler);
+    cleanup(() => {
+      r.removeEventListener("scroll", scrollHandler);
     });
   });
 
-  useVisibleTask$(({ track }) => {
-    track(loaded);
-    setTimeout(() => {
-      ref.value!.scrollTo({
-        top: ref.value!.scrollHeight,
-        behavior: "instant",
-      });
-    }, 500);
+  useTask$(({ track, cleanup }) => {
+    const pinned = track(pinned_to_bottom);
+    const r = track(ref);
+
+    console.log("observe...", pinned);
+
+    if (!pinned) return;
+    if (!r) return;
+
+    r.scrollTo({
+      top: r.scrollHeight,
+      behavior: "instant",
+    });
+
+    const config = { childList: true, subtree: true };
+    const observer = new MutationObserver((mutationsList, observer) => {
+      for (let mutation of mutationsList) {
+        if (mutation.type === "childList") {
+          r.scrollTo({
+            top: r.scrollHeight,
+            behavior: "instant",
+          });
+        }
+      }
+    });
+
+    observer.observe(r, config);
+    cleanup(() => {
+      observer.disconnect();
+    });
   });
 
   return (
     <>
       <div class="flex-1 overflow-y-auto overflow-x-hidden pb-4" ref={ref}>
-        {loaded.value ? (
-          messages.value.length == 0 ? (
+        {realtime.rows.value ? (
+          realtime.rows.value.length == 0 ? (
             <div class="px-8 py-4 text-sm text-neutral-500">No messages</div>
           ) : (
             <div>
-              {messages.value.map((message) => (
+              {realtime.rows.value.map((message) => (
                 <div
                   key={message.id}
                   class="flex cursor-pointer items-start space-x-4 px-8 py-4 hover:bg-neutral-100 hover:dark:bg-neutral-800"
@@ -168,7 +192,24 @@ const TextChannelView = component$((_: { channel: Channel }) => {
         )}
       </div>
 
-      <div class="flex-none space-y-2 px-4 pb-4">
+      <div class="relative flex-none px-4 pb-4">
+        <div class="absolute left-0 right-0 top-0 flex -translate-y-full p-2 px-4">
+          <div class="flex-1" />
+          {!pinned_to_bottom.value && (
+            <button
+              class="flex flex-none items-center space-x-1 rounded-full border bg-white p-2 px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-100 hover:text-black"
+              onClick$={() => {
+                ref.value?.scrollTo({
+                  top: ref.value.scrollHeight,
+                  behavior: "smooth",
+                });
+              }}
+            >
+              <div class="flex-1">Scroll to bottom</div>
+              <LuChevronsDown class="h-4 w-4 flex-none" />
+            </button>
+          )}
+        </div>
         <div class=" flex  items-start rounded-lg border  bg-white dark:bg-neutral-800 ">
           <textarea
             bind:value={input}

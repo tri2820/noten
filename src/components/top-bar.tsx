@@ -1,7 +1,7 @@
 import { component$, useContext } from "@builder.io/qwik";
 import { LuPanelLeftOpen } from "@qwikest/icons/lucide";
 import ThemeButton from "./theme-button";
-import { UIContext } from "./use-ui-provider";
+import { UIContext } from "./ui-provider";
 
 export default component$((_: { name: string }) => {
   const ui = useContext(UIContext);

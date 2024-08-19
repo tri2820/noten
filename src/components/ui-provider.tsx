@@ -1,5 +1,7 @@
 import {
+  component$,
   createContextId,
+  Slot,
   useContextProvider,
   useStore,
   useVisibleTask$,
@@ -13,8 +15,8 @@ export type UIContext = {
 };
 export const UIContext = createContextId<UIContext>("ui");
 
-export default (ui: UIContext) => {
-  const store = useStore<UIContext>(ui);
+export default component$((_: { ui: UIContext }) => {
+  const store = useStore<UIContext>(_.ui);
   useContextProvider(UIContext, store);
   useVisibleTask$(({ track }) => {
     track(store);
@@ -22,5 +24,5 @@ export default (ui: UIContext) => {
     Cookies.set("ui", s);
   });
 
-  return store;
-};
+  return <Slot />;
+});

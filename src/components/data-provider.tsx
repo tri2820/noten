@@ -1,9 +1,11 @@
 import {
+  component$,
   createContextId,
   implicit$FirstArg,
   noSerialize,
   NoSerialize,
   QRL,
+  Slot,
   Tracker,
   useContext,
   useContextProvider,
@@ -34,7 +36,7 @@ export type DataContext = {
   };
 };
 export const DataContext = createContextId<DataContext>("data");
-export default () => {
+export default component$(() => {
   const store = useStore<DataContext>({
     profile: {},
     channels: [
@@ -214,5 +216,5 @@ export default () => {
 
   // TODO: Cache locally
 
-  return store;
-};
+  return <Slot />;
+});

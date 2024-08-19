@@ -7,7 +7,7 @@ import {
 } from "@builder.io/qwik";
 import { Link, useLocation } from "@builder.io/qwik-city";
 import { LuHash, LuPlus, LuVolume2 } from "@qwikest/icons/lucide";
-import { DataContext } from "./use-data-provider";
+import { DataContext } from "./data-provider";
 
 export type Channel = {
   id: string;

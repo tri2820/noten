@@ -8,7 +8,7 @@ import {
 
 import data from "@emoji-mart/data/sets/14/twitter.json";
 import * as Emoji from "emoji-mart";
-import { UIContext } from "./use-ui-provider";
+import { UIContext } from "./ui-provider";
 
 export default component$(
   (_: {
