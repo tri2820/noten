@@ -5,15 +5,15 @@ import {
   useStore,
   useVisibleTask$,
 } from "@builder.io/qwik";
-import { useLocation } from "@builder.io/qwik-city";
 import { Editor } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import StarterKit from "@tiptap/starter-kit";
-import * as Y from "yjs";
 import { EditorStateContext } from "./editor-state-provider";
+import { LocalDataContext } from "./local-data-provider";
 import { SupabaseContext } from "./supabase-provider";
-import TiptapCollabProvider, { hexToBytes } from "./tiptap-collab-provider";
+import TiptapCollabProvider from "./tiptap-collab-provider";
+import Placeholder from "@tiptap/extension-placeholder";
 
 const colors = [
   { name: "red", background: "#b91c1c" },
@@ -80,46 +80,43 @@ export const renderCursor = (user: any) => {
 };
 
 export default (ref: Signal<HTMLElement | undefined>) => {
+  const localData = useContext(LocalDataContext);
   const editorState = useContext(EditorStateContext);
   const store = useStore<{ state?: string; ready: boolean }>({
     ready: false,
   });
   const supabase = useContext(SupabaseContext);
-  const loc = useLocation();
 
   useVisibleTask$(({ track, cleanup }) => {
     const client = track(() => supabase.client);
     const user = track(() => supabase.user);
     const element = track(ref);
+    const id = track(localData.note_id);
     const state = track(() => store.state);
     const ready = track(() => store.ready);
 
     if (!client) return;
     if (!user) return;
     if (!element) return;
+    if (!id) return;
 
     // reset state
     editorState.loading = false;
 
     let provider: TiptapCollabProvider | undefined;
     if (ready) {
-      provider = new TiptapCollabProvider(
-        client,
-        loc.params.id,
-        state,
-        async (state) => {
-          console.log("saving...");
-          editorState.loading = true;
-          await (async () => {
-            const _update = await client
-              .from("note")
-              .update({ state })
-              .eq("id", loc.params.id);
-            console.log("_update", _update);
-          })();
-          editorState.loading = false;
-        },
-      );
+      provider = new TiptapCollabProvider(client, id, state, async (state) => {
+        console.log("saving...");
+        editorState.loading = true;
+        await (async () => {
+          const _update = await client
+            .from("note")
+            .update({ state })
+            .eq("id", id);
+          console.log("_update", _update);
+        })();
+        editorState.loading = false;
+      });
     }
 
     console.log("creating...", ready, provider);
@@ -128,6 +125,9 @@ export default (ref: Signal<HTMLElement | undefined>) => {
       extensions: [
         StarterKit.configure({
           history: false,
+        }),
+        Placeholder.configure({
+          placeholder: "Write something…",
         }),
         ...(provider
           ? [

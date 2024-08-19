@@ -1,20 +1,7 @@
-import {
-  component$,
-  Slot,
-  useComputed$,
-  useContext,
-  useSignal,
-} from "@builder.io/qwik";
-import { Link, useLocation } from "@builder.io/qwik-city";
+import { component$, Slot, useContext } from "@builder.io/qwik";
+import { Link } from "@builder.io/qwik-city";
 import { LuHash, LuPlus, LuVolume2 } from "@qwikest/icons/lucide";
 import { LocalDataContext } from "./local-data-provider";
-
-export type Channel = {
-  id: string;
-  name: string;
-  created_at: Date;
-  type: "text" | "voice";
-};
 
 function convertChannelNameToSlug(channelName: string): string {
   return channelName
@@ -28,11 +15,6 @@ function convertChannelNameToSlug(channelName: string): string {
 }
 
 export default component$(() => {
-  const loc = useLocation();
-  const channel_id = useComputed$(() => {
-    const regex = /^\/channel\/[a-f0-9-]+\//i;
-    if (regex.test(loc.url.pathname)) return loc.params.id;
-  });
   const localData = useContext(LocalDataContext);
 
   return (
@@ -50,7 +32,7 @@ export default component$(() => {
               .filter((channel) => channel.type === "text")
               .map((channel) => (
                 <div
-                  data-active={channel_id.value === channel.id}
+                  data-active={localData.channel_id.value === channel.id}
                   key={channel.id}
                   class="text-hover flex items-center space-x-2 rounded-lg p-2 data-[active]:bg-neutral-200 data-[active]:text-black data-[active]:dark:bg-neutral-900 data-[active]:dark:text-white"
                 >
@@ -79,7 +61,7 @@ export default component$(() => {
               .filter((channel) => channel.type === "voice")
               .map((channel) => (
                 <div
-                  data-active={channel_id.value === channel.id}
+                  data-active={localData.channel_id.value === channel.id}
                   key={channel.id}
                   class="text-hover flex items-center space-x-2 rounded-lg p-2 data-[active]:bg-neutral-200 data-[active]:text-black data-[active]:dark:bg-neutral-900 data-[active]:dark:text-white"
                 >

@@ -59,8 +59,8 @@ export const useUICookie = routeLoader$<UIContext>(({ sharedMap, cookie }) => {
 
 export default component$(() => {
   const ui = useUICookie();
-
   const loc = useLocation();
+
   return (
     <DataProvider>
       <UiProvider ui={ui.value}>

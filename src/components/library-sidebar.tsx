@@ -1,29 +1,11 @@
-import {
-  component$,
-  Slot,
-  useComputed$,
-  useContext,
-  useSignal,
-} from "@builder.io/qwik";
+import { component$, Slot, useContext } from "@builder.io/qwik";
+import { Link } from "@builder.io/qwik-city";
 import { LuPlus } from "@qwikest/icons/lucide";
-import Twemoji from "./twemoji";
-import { Link, useLocation } from "@builder.io/qwik-city";
 import { LocalDataContext } from "./local-data-provider";
-
-export type Note = {
-  id: string;
-  state: string;
-  created_at: Date;
-  name: string;
-};
+import Twemoji from "./twemoji";
 
 export default component$(() => {
   const localData = useContext(LocalDataContext);
-  const loc = useLocation();
-  const note_id = useComputed$(() => {
-    const regex = /^\/note\/[a-f0-9-]+\//i;
-    if (regex.test(loc.url.pathname)) return loc.params.id;
-  });
 
   return (
     <>
@@ -38,7 +20,7 @@ export default component$(() => {
           <div>
             {localData.notes.map((note) => (
               <div
-                data-active={note_id.value === note.id}
+                data-active={localData.note_id.value === note.id}
                 key={note.id}
                 class="text-hover flex items-center space-x-2 rounded-lg p-2 data-[active]:bg-neutral-200 data-[active]:text-black data-[active]:dark:bg-neutral-900 data-[active]:dark:text-white"
               >

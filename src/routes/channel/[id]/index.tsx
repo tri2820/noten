@@ -12,8 +12,7 @@ import { BsSendFill } from "@qwikest/icons/bootstrap";
 import { LuChevronsDown } from "@qwikest/icons/lucide";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Avatar from "~/components/avatar";
-import { Channel } from "~/components/chat-sidebar";
-import { LocalDataContext } from "~/components/local-data-provider";
+import { Channel, LocalDataContext } from "~/components/local-data-provider";
 import PendingMessages from "~/components/pending-messages";
 import PendingText from "~/components/pending-text";
 import { SupabaseContext } from "~/components/supabase-provider";
@@ -246,40 +245,23 @@ const TextChannelView = component$((_: { channel: Channel }) => {
 });
 
 export default component$(() => {
-  const loc = useLocation();
   const localData = useContext(LocalDataContext);
   const store = useStore<{
     channel?: Channel;
   }>({});
 
   useVisibleTask$(({ track, cleanup }) => {
-    track(loc);
-    const c = localData.channels.find((x) => x.id == loc.params.id);
+    const channel_id = track(localData.channel_id);
+    const c = localData.channels.find((x) => x.id == channel_id);
     if (!c) return;
     store.channel = c;
+
+    // TODO: load channel
+
     cleanup(() => {
       store.channel = undefined;
     });
   });
-
-  // Update channel data
-  // Here we assume the user can only access the channel by clicking the item on the sidebar, so the channel data is already there
-  // const channelResource = useSupabaseResource$(
-  //   async ({ track, cleanup, client }) => {
-  //     track(() => loc.params.id);
-
-  //     const controller = new AbortController();
-  //     cleanup(() => {
-  //       controller.abort();
-  //     });
-  //     return await client
-  //       .from("channel")
-  //       .select()
-  //       .eq("id", loc.params.id)
-  //       .abortSignal(controller.signal)
-  //       .single();
-  //   },
-  // );
 
   if (!store.channel) return <></>;
 

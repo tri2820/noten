@@ -1,27 +1,31 @@
 import {
   component$,
   createContextId,
-  implicit$FirstArg,
-  noSerialize,
-  NoSerialize,
-  QRL,
+  Signal,
   Slot,
-  Tracker,
-  useContext,
+  useComputed$,
   useContextProvider,
-  useResource$,
   useStore,
-  useVisibleTask$,
 } from "@builder.io/qwik";
-import { SupabaseClient } from "@supabase/supabase-js";
-import {
-  createBrowserClient,
-  createServerClient,
-} from "./supabase/supabase-auth-helpers-qwik";
-import { Channel } from "./chat-sidebar";
-import { Note } from "./library-sidebar";
+import { useLocation } from "@builder.io/qwik-city";
+
+export type Channel = {
+  id: string;
+  name: string;
+  created_at: Date;
+  type: "text" | "voice";
+};
+
+export type Note = {
+  id: string;
+  name: string;
+  created_at: Date;
+  state?: string;
+};
 
 export type LocalDataContext = {
+  note_id: Signal<string | undefined>;
+  channel_id: Signal<string | undefined>;
   channels: Channel[];
   notes: Note[];
   profile: {
@@ -37,7 +41,20 @@ export type LocalDataContext = {
 };
 export const LocalDataContext = createContextId<LocalDataContext>("local-data");
 export default component$(() => {
+  const loc = useLocation();
+  const note_id = useComputed$(() => {
+    const regex = /^\/note\/[a-f0-9-]+\//i;
+    if (regex.test(loc.url.pathname)) return loc.params.id;
+  });
+
+  const channel_id = useComputed$(() => {
+    const regex = /^\/channel\/[a-f0-9-]+\//i;
+    if (regex.test(loc.url.pathname)) return loc.params.id;
+  });
+
   const store = useStore<LocalDataContext>({
+    note_id,
+    channel_id,
     profile: {},
     channels: [
       {

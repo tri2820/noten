@@ -1,45 +1,46 @@
 import {
   component$,
-  useComputed$,
   useContext,
   useSignal,
   useVisibleTask$,
 } from "@builder.io/qwik";
-import { useLocation, type DocumentHead } from "@builder.io/qwik-city";
-import TipTap from "~/components/use-tip-tap";
+import { type DocumentHead } from "@builder.io/qwik-city";
 import TopBar from "~/components/top-bar";
 
-import { HEAD } from "~/utils";
-import useTipTap from "~/components/use-tip-tap";
-import { UIContext } from "~/components/ui-provider";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { LocalDataContext } from "~/components/local-data-provider";
 import { SupabaseContext } from "~/components/supabase-provider";
+import useTipTap from "~/components/use-tip-tap";
+import { HEAD } from "~/utils";
 
 export default component$(() => {
-  const loc = useLocation();
-  const content = useComputed$(() => `Hey ${loc.params.id}`);
-  const ui = useContext(UIContext);
   const ref = useSignal<HTMLElement>();
   const tiptap = useTipTap(ref);
   const supabase = useContext(SupabaseContext);
+  const hide_tiptap = useSignal(false);
+  const localData = useContext(LocalDataContext);
+  const note = useSignal<any>();
 
-  useVisibleTask$(async ({ track }) => {
-    const l = track(loc);
+  useVisibleTask$(async ({ track, cleanup }) => {
+    const id = track(localData.note_id);
     const client = track(() => supabase.client);
     if (!client) return;
 
-    const _select = await client
-      .from("note")
-      .select()
-      .eq("id", l.params.id)
-      .single();
+    const n = localData.notes.find((x) => x.id == id);
+    note.value = n;
+
+    const _select = await client.from("note").select().eq("id", id).single();
     if (_select.error) {
       console.error("Error getting note", _select.error);
       return;
     }
 
+    note.value = _select.data;
+
+    console.log("_select.data.state", _select.data.state);
     tiptap.state = _select.data.state;
     tiptap.ready = true;
+    // hide_tiptap.value = _select.data.state ? false : true;
+
     // tiptap.state = `
     //      <h2>
     //       Hi there ${l.params.id},
@@ -70,14 +71,24 @@ export default component$(() => {
     //       — Mom
     //     </blockquote>
     //     `;
+
+    cleanup(() => {
+      note.value = undefined;
+    });
   });
 
   return (
     <div class="flex h-screen flex-1 flex-col overflow-hidden bg-white dark:bg-neutral-900">
-      <TopBar name={"Just a note"} />
+      <TopBar name={note.value?.name} />
 
       <div class="flex flex-1 flex-col overflow-y-auto">
-        <div ref={ref} class="flex flex-1 flex-col" />
+        <div
+          data-hidden={hide_tiptap.value}
+          ref={ref}
+          class="flex flex-1 flex-col data-[hidden]:hidden"
+        />
+
+        {hide_tiptap.value && <div>Pick your template</div>}
       </div>
     </div>
   );

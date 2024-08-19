@@ -48,7 +48,7 @@ export const SupabaseProvider = component$(() => {
   });
 
   const load_notes = $(async (client: SupabaseClient) => {
-    const _select = await client.from("note").select();
+    const _select = await client.from("note").select("id, name, created_at");
     if (!_select.data) return;
     localData.notes = _select.data;
   });
