@@ -11,7 +11,7 @@ import { StreamingContext } from "./streaming-provider";
 
 export default component$(
   (_: {
-    type: "local" | "screensharing" | { profile_id: string };
+    type: "local" | "screensharing" | { id: string };
     muted?: boolean;
   }) => {
     const streaming = useContext(StreamingContext);
@@ -23,14 +23,14 @@ export default component$(
           ? streaming.local.name
           : _.type == "screensharing"
             ? streaming.screensharing?.name
-            : streaming.peers[_.type.profile_id]?.name) ?? "?",
+            : streaming.peer_videos[_.type.id]?.name) ?? "?",
     );
     const stream = useComputed$(() =>
       _.type == "local"
         ? streaming.local.stream
         : _.type == "screensharing"
           ? streaming.screensharing?.stream
-          : streaming.peers[_.type.profile_id]?.stream,
+          : streaming.peer_videos[_.type.id]?.stream,
     );
 
     useVisibleTask$(({ track }) => {
@@ -42,8 +42,8 @@ export default component$(
     });
 
     return (
-      <div class="relative h-full w-full overflow-hidden rounded-lg bg-neutral-900">
-        <div class="absolute bottom-2 left-2 z-10 rounded-lg bg-black/70 px-4 py-2 text-sm leading-none tracking-tight">
+      <div class="relative h-full w-full overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-900">
+        <div class="absolute bottom-2 left-2 z-10 rounded-lg bg-white/70 px-4 py-2 text-sm leading-none tracking-tight dark:bg-black/70">
           {name.value}
         </div>
 

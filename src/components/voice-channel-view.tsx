@@ -2,14 +2,9 @@ import {
   $,
   component$,
   noSerialize,
-  useComputed$,
   useContext,
   useVisibleTask$,
 } from "@builder.io/qwik";
-import { beam, createCallsSession, pull_tracks, push_tracks } from "~/calls";
-import { Channel } from "~/components/local-data-provider";
-import { Peer, StreamingContext } from "./streaming-provider";
-import VideoView from "./video-view";
 import {
   LuArrowLeftToLine,
   LuCamera,
@@ -19,20 +14,14 @@ import {
   LuScreenShare,
   LuScreenShareOff,
 } from "@qwikest/icons/lucide";
+import { beam, createCallsSession, pull_tracks, push_tracks } from "~/calls";
+import { Channel } from "~/components/local-data-provider";
+import { StreamingContext, VoiceRealtimeContext } from "./streaming-provider";
+import VideoView from "./video-view";
 
 export default component$((_: { channel: Channel }) => {
-  const participants = useComputed$<Peer[]>(() => []);
   const streaming = useContext(StreamingContext);
-  const screensharing_participants = useComputed$(() =>
-    participants.value.filter(
-      (
-        p,
-      ): p is Peer & {
-        screensharing: NonNullable<Peer["screensharing"]>;
-        profile_id: string;
-      } => (p.screensharing && p.profile_id ? true : false),
-    ),
-  );
+  const realtime = useContext(VoiceRealtimeContext);
 
   const get_local_tracks_and_push = $(
     async (s: { peerConnection: RTCPeerConnection; sessionId: any }) => {
@@ -74,30 +63,32 @@ export default component$((_: { channel: Channel }) => {
         };
       });
 
-      // update local state
-      // client_state.value = {
-      //   ...client_state.value,
-      //   tracks,
-      // };
+      realtime.local = {
+        ...realtime.local,
+        tracks: {
+          message_id: new Date().toISOString(),
+          data: tracks,
+        },
+      };
     },
   );
 
   // Manage mute unmute
   useVisibleTask$(({ track }) => {
-    const m = track(() => streaming.local.media_state);
+    const media_state = track(() => streaming.local.media_state);
     const s = track(() => streaming.local.stream);
     if (!s) return;
 
     const videoTracks = s.getVideoTracks();
     const audioTracks = s.getAudioTracks();
-    videoTracks.forEach((t) => (t.enabled = m.video));
-    audioTracks.forEach((t) => (t.enabled = m.audio));
+    videoTracks.forEach((t) => (t.enabled = media_state.video));
+    audioTracks.forEach((t) => (t.enabled = media_state.audio));
 
     // update local state
-    // client_state.value = {
-    //   ...client_state.value,
-    //   media_state: m,
-    // };
+    realtime.local = {
+      ...realtime.local,
+      media_state,
+    };
   });
 
   const stop_sharing = $(() => {
@@ -105,10 +96,10 @@ export default component$((_: { channel: Channel }) => {
     streaming.screensharing!.stream?.getTracks().forEach((t) => t.stop());
     streaming.screensharing = undefined;
 
-    // client_state.value = {
-    //   ...client_state.value,
-    //   screensharing: undefined,
-    // };
+    realtime.local = {
+      ...realtime.local,
+      screensharing: undefined,
+    };
   });
 
   const share_or_stop_screen = $(async () => {
@@ -133,10 +124,10 @@ export default component$((_: { channel: Channel }) => {
       return;
     }
 
-    const id = new Date().toISOString();
+    const message_id = new Date().toISOString();
     streaming.screensharing = {
-      profile_id: "tri-0000",
-      id,
+      id: "tri-0000",
+      message_id,
       name: `Tri's screen`,
       stream: noSerialize(_stream),
     };
@@ -167,13 +158,13 @@ export default component$((_: { channel: Channel }) => {
       };
     });
 
-    // client_state.value = {
-    //   ...client_state.value,
-    //   screensharing: {
-    //     id,
-    //     tracks,
-    //   },
-    // };
+    realtime.local = {
+      ...realtime.local,
+      screensharing: {
+        message_id,
+        tracks,
+      },
+    };
   });
 
   //   Startup
@@ -187,24 +178,29 @@ export default component$((_: { channel: Channel }) => {
       <div
         class="grid flex-1 gap-2 overflow-hidden"
         style={{
-          gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(participants.value.length + screensharing_participants.value.length))}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${Math.ceil(
+            Math.sqrt(
+              realtime.__ready_peers.length +
+                realtime.__screensharing_peers.length,
+            ),
+          )}, minmax(0, 1fr))`,
         }}
       >
         <VideoView type="local" muted />
 
-        {Object.entries(streaming.peers).map(([profile_id, p]) =>
+        {Object.entries(streaming.peer_videos).map(([id, p]) =>
           p ? (
-            <div key={profile_id}>
-              <VideoView type={{ profile_id }} />
+            <div key={id}>
+              <VideoView type={{ id }} />
             </div>
           ) : (
             <></>
           ),
         )}
 
-        {screensharing_participants.value.map((p) => (
+        {realtime.__screensharing_peers.map((p) => (
           <div
-            key={`${p.profile_id} - screen sharing`}
+            key={`${p.id} - screen sharing`}
             class="flex h-full w-full items-center rounded-lg bg-neutral-800"
           >
             <div class="flex flex-1 flex-col items-center  space-y-2 ">
@@ -212,9 +208,9 @@ export default component$((_: { channel: Channel }) => {
                 onClick$={async () => {
                   try {
                     streaming.screensharing = {
-                      id: p.screensharing.id,
-                      profile_id: p.profile_id,
+                      id: p.id,
                       name: `${p.name}'s screen`,
+                      message_id: p.screensharing.message_id,
                     };
                     const s = await createCallsSession();
 
@@ -279,7 +275,7 @@ export default component$((_: { channel: Channel }) => {
             onClick$={share_or_stop_screen}
           >
             {streaming.screensharing ? (
-              streaming.screensharing.profile_id == "tri-0000" ? (
+              streaming.screensharing.id == "tri-0000" ? (
                 <LuScreenShareOff class="h-6 w-6" />
               ) : (
                 <LuArrowLeftToLine class="h-6 w-6" />

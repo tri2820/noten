@@ -26,7 +26,7 @@ export default component$(() => {
       name: name.value,
     });
 
-    // await c.auth.refreshSession();
+    await c.auth.refreshSession();
 
     nav("/");
     return true;
