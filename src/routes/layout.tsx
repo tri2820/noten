@@ -7,6 +7,7 @@ import {
 } from "@builder.io/qwik-city";
 import DataProvider from "~/components/local-data-provider";
 import Sidebar from "~/components/sidebar";
+import StreamingProvider from "~/components/streaming-provider";
 import { SupabaseProvider } from "~/components/supabase-provider";
 import { createServerClient } from "~/components/supabase/supabase-auth-helpers-qwik";
 import UiProvider, { UIContext } from "~/components/ui-provider";
@@ -64,16 +65,18 @@ export default component$(() => {
     <DataProvider>
       <UiProvider ui={ui.value}>
         <SupabaseProvider>
-          {loc.url.pathname === "/login/" ? (
-            <Slot />
-          ) : (
-            <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">
-              <div class="flex items-start">
-                <Sidebar />
-                <Slot />
+          <StreamingProvider>
+            {loc.url.pathname === "/login/" ? (
+              <Slot />
+            ) : (
+              <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">
+                <div class="flex items-start">
+                  <Sidebar />
+                  <Slot />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </StreamingProvider>
         </SupabaseProvider>
       </UiProvider>
     </DataProvider>
