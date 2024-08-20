@@ -14,6 +14,7 @@ import useTipTap from "~/components/use-tip-tap";
 import { dateF, HEAD } from "~/utils";
 import { LuCheckCircle, LuLoader2 } from "@qwikest/icons/lucide";
 import dayjs from "dayjs";
+import { BsCheckCircleFill } from "@qwikest/icons/bootstrap";
 
 const templates: { [id: string]: string } = {
   blank: "",
@@ -101,7 +102,9 @@ export default component$(() => {
         {tiptap.loading ? (
           <LuLoader2 class="h-4 w-4 animate-spin" />
         ) : tiptap.last_updated ? (
-          <LuCheckCircle class="h-4 w-4 text-neutral-500" />
+          <div class="text-neutral-500">
+            <BsCheckCircleFill />
+          </div>
         ) : (
           <div></div>
         )}

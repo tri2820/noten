@@ -9,7 +9,7 @@ import {
 } from "@builder.io/qwik";
 import { useLocation, type DocumentHead } from "@builder.io/qwik-city";
 import { BsSendFill } from "@qwikest/icons/bootstrap";
-import { LuChevronsDown } from "@qwikest/icons/lucide";
+import { LuChevronsDown, LuHash, LuVolume2 } from "@qwikest/icons/lucide";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Avatar from "~/components/avatar";
 import { Channel, LocalDataContext } from "~/components/local-data-provider";
@@ -17,7 +17,7 @@ import PendingMessages from "~/components/pending-messages";
 import PendingText from "~/components/pending-text";
 import { SupabaseContext } from "~/components/supabase-provider";
 import TopBar from "~/components/top-bar";
-import { dateF, HEAD } from "~/utils";
+import { convertChannelNameToSlug, dateF, HEAD } from "~/utils";
 
 const TextChannelView = component$((_: { channel: Channel }) => {
   const localData = useContext(LocalDataContext);
@@ -271,7 +271,16 @@ export default component$(() => {
       class="flex h-screen flex-1 flex-col overflow-hidden  data-[ctype=text]:bg-white data-[ctype=voice]:bg-neutral-200 data-[ctype=text]:dark:bg-neutral-900 data-[ctype=voice]:dark:bg-black"
     >
       <TopBar>
-        <div class="text-lg font-medium">{store.channel.name}</div>
+        <div class="flex items-center space-x-2">
+          {store.channel.type == "text" ? (
+            <LuHash class="h-4 w-4" />
+          ) : (
+            <LuVolume2 class="h-4 w-4" />
+          )}
+          <div class="text-lg font-medium">
+            {convertChannelNameToSlug(store.channel.name)}
+          </div>
+        </div>
       </TopBar>
 
       {store.channel.type == "text" ? (

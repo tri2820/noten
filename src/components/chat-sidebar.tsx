@@ -2,17 +2,7 @@ import { component$, Slot, useContext } from "@builder.io/qwik";
 import { Link } from "@builder.io/qwik-city";
 import { LuHash, LuPlus, LuVolume2 } from "@qwikest/icons/lucide";
 import { LocalDataContext } from "./local-data-provider";
-
-function convertChannelNameToSlug(channelName: string): string {
-  return channelName
-    .toLowerCase()
-    .trim()
-    .replace(/ /g, "-")
-    .replace(/[^\w-]/g, "")
-    .replace(/--+/g, "-")
-    .replace(/^-+/, "")
-    .replace(/-+$/, "");
-}
+import { convertChannelNameToSlug } from "~/utils";
 
 export default component$(() => {
   const localData = useContext(LocalDataContext);
