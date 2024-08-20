@@ -9,7 +9,7 @@ import { SupabaseContext } from "./supabase-provider";
 import Avatar from "./avatar";
 
 export default component$(() => {
-  const supabase = useContext(SupabaseContext);
+  // const supabase = useContext(SupabaseContext);
   const ui = useContext(UIContext);
   const S = useComputed$(() => {
     return {
@@ -61,10 +61,10 @@ export default component$(() => {
         </button>
         <div class="flex-1" />
 
-        <div>{supabase.profile?.name}</div>
-        <div class="flex-none">
+        {/* <div>{supabase.profile?.name}</div> */}
+        {/* <div class="flex-none">
           <Avatar class="h-8 w-8 rounded-lg" src={supabase.profile?.avatar} />
-        </div>
+        </div> */}
       </div>
     </div>
   );
