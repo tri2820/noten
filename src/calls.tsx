@@ -22,8 +22,7 @@ export const calls_api = async function (
 ): Promise<R> {
   const appId = this.env.get("CF_CALLS_APP_ID");
   const appToken = this.env.get("CF_CALLS_API_TOKEN");
-  console.log("appId", appId);
-  console.log("appToken", appToken);
+
   const headers = {
     "content-type": "application/json",
     Authorization: `Bearer ${appToken}`,
@@ -36,7 +35,6 @@ export const calls_api = async function (
   });
   try {
     const data = await response.json();
-    console.log("data", data);
     return {
       data,
       error: undefined,

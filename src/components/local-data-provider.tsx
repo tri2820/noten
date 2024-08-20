@@ -5,7 +5,9 @@ import {
   Slot,
   useComputed$,
   useContextProvider,
+  useSignal,
   useStore,
+  useVisibleTask$,
 } from "@builder.io/qwik";
 import { useLocation } from "@builder.io/qwik-city";
 
@@ -49,9 +51,13 @@ export default component$(() => {
     if (regex.test(loc.url.pathname)) return loc.params.id;
   });
 
-  const channel_id = useComputed$(() => {
+  const channel_id = useSignal<string>();
+  useVisibleTask$(({ track }) => {
+    const l = track(loc);
     const regex = /^\/channel\/[a-f0-9-]+\//i;
-    if (regex.test(loc.url.pathname)) return loc.params.id;
+    if (!regex.test(l.url.pathname)) return;
+
+    channel_id.value = l.params.id;
   });
 
   const store = useStore<LocalDataContext>({

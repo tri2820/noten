@@ -14,6 +14,7 @@ import { LocalDataContext } from "./local-data-provider";
 import { SupabaseContext } from "./supabase-provider";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { createCallsSession, pull_tracks } from "~/calls";
+import VideoView from "./video-view";
 
 type VoiceRealtimeContext = {
   subscribed?: {
@@ -53,6 +54,7 @@ type StreamingContext = {
         }
       | undefined;
   };
+  mode: "grid" | "focus_screensharing";
 };
 
 export type MessageID = string;
@@ -105,6 +107,7 @@ export default component$(() => {
       },
     },
     peer_videos: {},
+    mode: "grid",
   });
   useContextProvider(StreamingContext, streaming);
 
@@ -184,13 +187,17 @@ export default component$(() => {
     });
 
     const s = streaming.screensharing;
+    console.log("hey", s);
     if (!s) return;
     const current_screensharing_peer = ready_peers.find((p) => p.id == s.id);
+    console.log("yo", current_screensharing_peer);
     if (
       !current_screensharing_peer ||
       !current_screensharing_peer.screensharing
     ) {
+      console.log("set grid");
       streaming.screensharing = undefined;
+      streaming.mode = "grid";
       return;
     }
 
@@ -211,7 +218,7 @@ export default component$(() => {
         id: current_screensharing_peer.id,
         message_id: current_screensharing_peer.screensharing.message_id,
         stream: noSerialize(stream),
-        name: `${current_screensharing_peer.name ?? "Anon"}'s screen`,
+        name: `${current_screensharing_peer.name}'s screen`,
       };
     } catch (e) {
       console.warn("Cannot pull tracks", e);
@@ -248,9 +255,7 @@ export default component$(() => {
           x.name && x.id && x.tracks ? true : false,
         );
 
-        console.log("what");
         realtime.__ready_peers = __ready_peers;
-        console.log("is going on?");
 
         realtime.__screensharing_peers = __ready_peers.filter(
           (p): p is ScreenSharingPeer =>
@@ -284,5 +289,35 @@ export default component$(() => {
     });
   });
 
-  return <Slot />;
+  // Manage mute unmute
+  useVisibleTask$(({ track }) => {
+    const media_state = track(() => streaming.local.media_state);
+    const s = track(() => streaming.local.stream);
+    if (!s) return;
+
+    const videoTracks = s.getVideoTracks();
+    const audioTracks = s.getAudioTracks();
+    videoTracks.forEach((t) => (t.enabled = media_state.video));
+    audioTracks.forEach((t) => (t.enabled = media_state.audio));
+
+    // update local state
+    realtime.local = {
+      ...realtime.local,
+      media_state,
+    };
+  });
+
+  return (
+    <div class="relative">
+      {streaming.mode == "focus_screensharing" && (
+        <div class="fixed bottom-0 right-0 z-50 px-2 py-4">
+          <div class="aspect-video w-64">
+            {/* TODO: Change to speaking user */}
+            <VideoView type="local" />
+          </div>
+        </div>
+      )}
+      <Slot />
+    </div>
+  );
 });

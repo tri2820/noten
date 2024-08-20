@@ -99,15 +99,15 @@ export default component$(() => {
       <TopBar>
         <div class="text-lg font-medium">{note.value?.name}</div>
 
-        {tiptap.loading ? (
-          <LuLoader2 class="h-4 w-4 animate-spin" />
-        ) : tiptap.last_updated ? (
-          <div class="text-neutral-500">
+        <div class="text-neutral-400 dark:text-neutral-600">
+          {tiptap.loading ? (
+            <LuLoader2 class="h-4 w-4 animate-spin" />
+          ) : tiptap.last_updated ? (
             <BsCheckCircleFill />
-          </div>
-        ) : (
-          <div></div>
-        )}
+          ) : (
+            <div></div>
+          )}
+        </div>
       </TopBar>
 
       <div class="flex flex-1 flex-col overflow-y-auto">

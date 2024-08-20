@@ -62,23 +62,23 @@ export default component$(() => {
   const loc = useLocation();
 
   return (
-    <DataProvider>
-      <UiProvider ui={ui.value}>
-        <SupabaseProvider>
-          <StreamingProvider>
-            {loc.url.pathname === "/login/" ? (
-              <Slot />
-            ) : (
-              <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">
+    <div class="min-h-screen bg-neutral-100 dark:bg-neutral-950 dark:text-white">
+      <DataProvider>
+        <UiProvider ui={ui.value}>
+          <SupabaseProvider>
+            <StreamingProvider>
+              {loc.url.pathname === "/login/" ? (
+                <Slot />
+              ) : (
                 <div class="flex items-start">
                   <Sidebar />
                   <Slot />
                 </div>
-              </div>
-            )}
-          </StreamingProvider>
-        </SupabaseProvider>
-      </UiProvider>
-    </DataProvider>
+              )}
+            </StreamingProvider>
+          </SupabaseProvider>
+        </UiProvider>
+      </DataProvider>
+    </div>
   );
 });

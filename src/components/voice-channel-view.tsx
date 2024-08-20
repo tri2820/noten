@@ -18,8 +18,10 @@ import { beam, createCallsSession, pull_tracks, push_tracks } from "~/calls";
 import { Channel } from "~/components/local-data-provider";
 import { StreamingContext, VoiceRealtimeContext } from "./streaming-provider";
 import VideoView from "./video-view";
+import { SupabaseContext } from "./supabase-provider";
 
 export default component$((_: { channel: Channel }) => {
+  const supabase = useContext(SupabaseContext);
   const streaming = useContext(StreamingContext);
   const realtime = useContext(VoiceRealtimeContext);
 
@@ -78,28 +80,14 @@ export default component$((_: { channel: Channel }) => {
     },
   );
 
-  // Manage mute unmute
-  useVisibleTask$(({ track }) => {
-    const media_state = track(() => streaming.local.media_state);
-    const s = track(() => streaming.local.stream);
-    if (!s) return;
-
-    const videoTracks = s.getVideoTracks();
-    const audioTracks = s.getAudioTracks();
-    videoTracks.forEach((t) => (t.enabled = media_state.video));
-    audioTracks.forEach((t) => (t.enabled = media_state.audio));
-
-    // update local state
-    realtime.local = {
-      ...realtime.local,
-      media_state,
-    };
-  });
-
   const stop_sharing = $(() => {
-    console.log("The user has ended sharing the screen");
+    console.log(
+      "The user has ended sharing the screen",
+      streaming.screensharing,
+    );
     streaming.screensharing!.stream?.getTracks().forEach((t) => t.stop());
     streaming.screensharing = undefined;
+    streaming.mode = "grid";
 
     realtime.local = {
       ...realtime.local,
@@ -108,6 +96,11 @@ export default component$((_: { channel: Channel }) => {
   });
 
   const share_or_stop_screen = $(async () => {
+    if (!supabase.profile) {
+      console.warn("Cannot share screen without a user");
+      return;
+    }
+
     if (streaming.screensharing) {
       stop_sharing();
       return;
@@ -131,13 +124,15 @@ export default component$((_: { channel: Channel }) => {
 
     const message_id = new Date().toISOString();
     streaming.screensharing = {
-      id: "tri-0000",
+      id: supabase.profile.id,
       message_id,
-      name: `Tri's screen`,
+      name: `${supabase.profile.name}'s screen`,
       stream: noSerialize(_stream),
     };
 
     _stream.getVideoTracks()[0].addEventListener("ended", stop_sharing);
+
+    streaming.mode = "focus_screensharing";
 
     const s = await createCallsSession();
 
@@ -174,68 +169,81 @@ export default component$((_: { channel: Channel }) => {
 
   //   Startup
   useVisibleTask$(async () => {
+    console.log("startup...");
+    if (streaming.local.stream) return;
+    console.log("push...");
     const localSession = await createCallsSession();
     get_local_tracks_and_push(localSession);
   });
 
   return (
     <div class="flex flex-1 flex-col items-stretch space-y-4 p-4">
-      <div
-        class="grid flex-1 gap-2 overflow-hidden"
-        style={{
-          gridTemplateColumns: `repeat(${Math.ceil(
-            Math.sqrt(
-              realtime.__ready_peers.length +
-                realtime.__screensharing_peers.length,
-            ),
-          )}, minmax(0, 1fr))`,
-        }}
-      >
-        <VideoView type="local" muted />
+      {streaming.mode == "grid" ? (
+        <div
+          class="grid flex-1 gap-2 overflow-hidden"
+          style={{
+            gridTemplateColumns: `repeat(${Math.ceil(
+              Math.sqrt(
+                realtime.__ready_peers.length +
+                  realtime.__screensharing_peers.length,
+              ),
+            )}, minmax(0, 1fr))`,
+          }}
+        >
+          <VideoView type="local" muted />
 
-        {Object.entries(streaming.peer_videos).map(([id, p]) =>
-          p ? <VideoView type={{ id }} /> : <></>,
-        )}
+          {Object.entries(streaming.peer_videos).map(([id, p]) =>
+            p ? <VideoView type={{ id }} /> : <></>,
+          )}
 
-        {realtime.__screensharing_peers.map((p) => (
-          <div
-            key={`${p.id} - screen sharing`}
-            class="flex h-full w-full items-center rounded-lg bg-neutral-100 dark:bg-neutral-800"
-          >
-            <div class="flex flex-1 flex-col items-center  space-y-2 ">
-              <button
-                onClick$={async () => {
-                  try {
-                    streaming.screensharing = {
-                      id: p.id,
-                      name: `${p.name}'s screen`,
-                      message_id: p.screensharing.message_id,
-                    };
-                    const s = await createCallsSession();
+          {realtime.__screensharing_peers.map((p) => (
+            <div
+              key={`${p.id} - screen sharing`}
+              class="flex h-full w-full items-center rounded-lg bg-neutral-100 dark:bg-neutral-800"
+            >
+              <div class="flex flex-1 flex-col items-center  space-y-2 ">
+                {p.id !== supabase.user?.id && (
+                  <button
+                    onClick$={async () => {
+                      try {
+                        streaming.screensharing = {
+                          id: p.id,
+                          name: `${p.name}'s screen`,
+                          message_id: p.screensharing.message_id,
+                        };
 
-                    const stream = await pull_tracks(
-                      s.peerConnection,
-                      s.sessionId,
-                      p.screensharing.tracks,
-                    );
+                        streaming.mode = "focus_screensharing";
 
-                    streaming.screensharing = {
-                      ...streaming.screensharing,
-                      stream: noSerialize(stream),
-                    };
-                  } catch (e) {
-                    console.warn("Cannot pull tracks", e);
-                  }
-                }}
-                class="rounded-full border bg-white px-4 py-2 hover:bg-neutral-50 dark:bg-neutral-900 hover:dark:bg-black"
-              >
-                View screen
-              </button>
-              <div class="text-center">{p.name} is sharing their screen</div>
+                        const s = await createCallsSession();
+                        const stream = await pull_tracks(
+                          s.peerConnection,
+                          s.sessionId,
+                          p.screensharing.tracks,
+                        );
+
+                        streaming.screensharing = {
+                          ...streaming.screensharing,
+                          stream: noSerialize(stream),
+                        };
+                      } catch (e) {
+                        console.warn("Cannot pull tracks", e);
+                      }
+                    }}
+                    class="rounded-full border bg-white px-4 py-2 hover:bg-neutral-50 dark:bg-neutral-900 hover:dark:bg-black"
+                  >
+                    View screen
+                  </button>
+                )}
+                <div class="text-center">{p.name} is sharing their screen</div>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div class="flex-1">
+          <VideoView type="screensharing" muted />
+        </div>
+      )}
 
       <div class="flex flex-none items-center space-x-2 ">
         <div class="flex-1" />
@@ -277,7 +285,7 @@ export default component$((_: { channel: Channel }) => {
             onClick$={share_or_stop_screen}
           >
             {streaming.screensharing ? (
-              streaming.screensharing.id == "tri-0000" ? (
+              streaming.screensharing.id == supabase.user?.id ? (
                 <LuScreenShareOff class="h-6 w-6" />
               ) : (
                 <LuArrowLeftToLine class="h-6 w-6" />

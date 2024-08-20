@@ -1,4 +1,5 @@
 import {
+  ClassList,
   component$,
   NoSerialize,
   useComputed$,
@@ -8,8 +9,50 @@ import {
   useVisibleTask$,
 } from "@builder.io/qwik";
 import { MessageID, StreamingContext } from "./streaming-provider";
-
-//   import LoadAnimation from "./load-animation";
+const LoadAnimation = component$(() => {
+  return (
+    <svg
+      class="w-16 text-black dark:text-white"
+      version="1.1"
+      id="L4"
+      xmlns="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      x="0px"
+      y="0px"
+      viewBox="0 0 52 100"
+      enable-background="new 0 0 0 0"
+      xml:space="preserve"
+    >
+      <circle fill="currentColor" stroke="none" cx="6" cy="50" r="6">
+        <animate
+          attributeName="opacity"
+          dur="1s"
+          values="0;1;0"
+          repeatCount="indefinite"
+          begin="0.1"
+        />
+      </circle>
+      <circle fill="currentColor" stroke="none" cx="26" cy="50" r="6">
+        <animate
+          attributeName="opacity"
+          dur="1s"
+          values="0;1;0"
+          repeatCount="indefinite"
+          begin="0.2"
+        />
+      </circle>
+      <circle fill="currentColor" stroke="none" cx="46" cy="50" r="6">
+        <animate
+          attributeName="opacity"
+          dur="1s"
+          values="0;1;0"
+          repeatCount="indefinite"
+          begin="0.3"
+        />
+      </circle>
+    </svg>
+  );
+});
 
 export default component$(
   (_: {
@@ -21,9 +64,11 @@ export default component$(
     const store = useStore<{
       message_id: MessageID;
       name: string;
+      ready: boolean;
     }>({
       message_id: new Date().toISOString(),
       name: "?",
+      ready: false,
     });
 
     useVisibleTask$(({ track }) => {
@@ -47,6 +92,7 @@ export default component$(
 
       store.message_id = k.message_id;
       v.srcObject = k.stream;
+      store.ready = true;
     });
 
     return (
@@ -56,19 +102,14 @@ export default component$(
         </div>
 
         <div class="absolute left-0 top-1/2 w-full -translate-y-1/2 ">
-          <div class="relative">
+          <div class="relative h-full w-full ">
             <video ref={video} class="w-full" autoplay muted={_.muted} />
+            {!store.ready && (
+              <div class="absolute bottom-0 left-0 right-0 top-0 flex flex-col items-center justify-center ">
+                <LoadAnimation />
+              </div>
+            )}
           </div>
-          {/* {stream.value ? (
-            <div class="relative">
-              <video ref={video} class="w-full" autoplay muted={_.muted} />
-            </div>
-          ) : (
-            <div class="flex flex-col items-center ">
-              <LoadAnimation />
-              Loading...
-            </div>
-          )} */}
         </div>
       </div>
     );
