@@ -1,11 +1,9 @@
 import { component$, Slot, useContext } from "@builder.io/qwik";
-import { LuLoader, LuLoader2, LuPanelLeftOpen } from "@qwikest/icons/lucide";
+import { LuPanelLeftOpen } from "@qwikest/icons/lucide";
 import ThemeButton from "./theme-button";
 import { UIContext } from "./ui-provider";
-import { EditorStateContext } from "./editor-state-provider";
 
 export default component$(() => {
-  const editorState = useContext(EditorStateContext);
   const ui = useContext(UIContext);
 
   return (

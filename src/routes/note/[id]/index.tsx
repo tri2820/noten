@@ -11,8 +11,9 @@ import TopBar from "~/components/top-bar";
 import { LocalDataContext, Note } from "~/components/local-data-provider";
 import { SupabaseContext } from "~/components/supabase-provider";
 import useTipTap from "~/components/use-tip-tap";
-import { HEAD } from "~/utils";
-import { LuLoader2 } from "@qwikest/icons/lucide";
+import { dateF, HEAD } from "~/utils";
+import { LuCheckCircle, LuLoader2 } from "@qwikest/icons/lucide";
+import dayjs from "dayjs";
 
 const templates: { [id: string]: string } = {
   blank: "",
@@ -75,13 +76,12 @@ export default component$(() => {
       data: _select.data.state,
       doc_id: _select.data.id,
     };
-    tiptap.ready = true;
+
     hide_tiptap.value = _select.data.state ? false : true;
 
     cleanup(() => {
       note.value = undefined;
       tiptap.init_state = undefined;
-      tiptap.ready = false;
     });
   });
 
@@ -97,7 +97,14 @@ export default component$(() => {
     <div class="flex h-screen flex-1 flex-col overflow-hidden bg-white dark:bg-neutral-900">
       <TopBar>
         <div class="text-lg font-medium">{note.value?.name}</div>
-        {tiptap.loading && <LuLoader2 class="h-4 w-4 animate-spin" />}
+
+        {tiptap.loading ? (
+          <LuLoader2 class="h-4 w-4 animate-spin" />
+        ) : tiptap.last_updated ? (
+          <LuCheckCircle class="h-4 w-4 text-neutral-500" />
+        ) : (
+          <div></div>
+        )}
       </TopBar>
 
       <div class="flex flex-1 flex-col overflow-y-auto">

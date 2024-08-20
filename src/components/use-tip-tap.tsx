@@ -10,12 +10,11 @@ import {
 import { Editor } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
+import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
-import { EditorStateContext } from "./editor-state-provider";
 import { LocalDataContext } from "./local-data-provider";
 import { SupabaseContext } from "./supabase-provider";
 import TiptapCollabProvider from "./tiptap-collab-provider";
-import Placeholder from "@tiptap/extension-placeholder";
 
 const colors = [
   { name: "red", background: "#b91c1c" },
@@ -88,11 +87,10 @@ export default (ref: Signal<HTMLElement | undefined>) => {
       data: string;
       doc_id: string;
     };
-    ready: boolean;
     loading: boolean;
+    last_updated?: Date;
     editor?: NoSerialize<Editor>;
   }>({
-    ready: false,
     loading: false,
   });
   const supabase = useContext(SupabaseContext);
@@ -100,44 +98,38 @@ export default (ref: Signal<HTMLElement | undefined>) => {
   useVisibleTask$(({ track, cleanup }) => {
     const client = track(() => supabase.client);
     const user = track(() => supabase.user);
+    const profile = track(() => supabase.profile);
     const element = track(ref);
     const id = track(localData.note_id);
     const init_state = track(() => store.init_state);
-    const ready = track(() => store.ready);
 
     if (!client) return;
     if (!user) return;
+    if (!profile) return;
     if (!element) return;
     if (!id) return;
     if (!init_state) return;
     if (init_state.doc_id != id) return;
 
-    // reset state
-    store.loading = false;
+    const provider = new TiptapCollabProvider(
+      client,
+      id,
+      init_state.data,
+      async (state) => {
+        console.log("saving...");
+        store.loading = true;
+        await (async () => {
+          const _update = await client
+            .from("note")
+            .update({ state })
+            .eq("id", id);
+        })();
+        store.last_updated = new Date();
+        store.loading = false;
+      },
+    );
 
-    let provider: TiptapCollabProvider | undefined;
-    if (ready) {
-      console.log("create provider instance", id);
-      provider = new TiptapCollabProvider(
-        client,
-        id,
-        init_state.data,
-        async (state) => {
-          console.log("saving...");
-          store.loading = true;
-          await (async () => {
-            const _update = await client
-              .from("note")
-              .update({ state })
-              .eq("id", id);
-            // console.log("update note in db:", id, state);
-          })();
-          store.loading = false;
-        },
-      );
-    }
-
-    console.log("creating...", ready, provider);
+    console.log("creating...", provider);
     const editor = new Editor({
       element,
       extensions: [
@@ -147,25 +139,19 @@ export default (ref: Signal<HTMLElement | undefined>) => {
         Placeholder.configure({
           placeholder: "Write something…",
         }),
-        ...(provider
-          ? [
-              Collaboration.configure({
-                document: provider.doc,
-              }),
-              CollaborationCursor.configure({
-                provider,
-                render: renderCursor,
-                user: {
-                  id: user.id,
-                  name: funnyNames[
-                    Math.floor(Math.random() * funnyNames.length)
-                  ],
-                  color_index: Math.floor(Math.random() * colors.length),
-                  // key `color` is somehow set automatically, but we don't use it
-                },
-              }),
-            ]
-          : []),
+        Collaboration.configure({
+          document: provider.doc,
+        }),
+        CollaborationCursor.configure({
+          provider,
+          render: renderCursor,
+          user: {
+            id: user.id,
+            name: profile.name,
+            color_index: Math.floor(Math.random() * colors.length),
+            // key `color` is somehow set automatically, but we don't use it
+          },
+        }),
       ],
       editorProps: {
         attributes: {
@@ -181,6 +167,8 @@ export default (ref: Signal<HTMLElement | undefined>) => {
       editor.destroy();
       provider?.destroy();
       store.editor = undefined;
+      store.loading = false;
+      store.last_updated = undefined;
     });
   });
 
