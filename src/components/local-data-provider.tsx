@@ -42,6 +42,8 @@ export type LocalDataContext = {
 export const LocalDataContext = createContextId<LocalDataContext>("local-data");
 export default component$(() => {
   const loc = useLocation();
+
+  // TODO: should not be cleaned up automatically (e.g. to maintain the call state)
   const note_id = useComputed$(() => {
     const regex = /^\/note\/[a-f0-9-]+\//i;
     if (regex.test(loc.url.pathname)) return loc.params.id;

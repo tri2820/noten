@@ -82,6 +82,10 @@ export const SupabaseProvider = component$(() => {
           load_notes(client);
         }
       });
+
+      window.addEventListener("beforeunload", () => {
+        client.removeAllChannels();
+      });
     },
     {
       strategy: "document-ready",

@@ -35,7 +35,12 @@ export default component$((_: { channel: Channel }) => {
           audio: true,
         });
 
-        streaming.local.stream = noSerialize(_stream);
+        console.log("set local stream", _stream);
+        streaming.local = {
+          ...streaming.local,
+          message_id: new Date().toISOString(),
+          stream: noSerialize(_stream),
+        };
       } catch (e) {
         console.warn(e);
         return;
@@ -189,19 +194,13 @@ export default component$((_: { channel: Channel }) => {
         <VideoView type="local" muted />
 
         {Object.entries(streaming.peer_videos).map(([id, p]) =>
-          p ? (
-            <div key={id}>
-              <VideoView type={{ id }} />
-            </div>
-          ) : (
-            <></>
-          ),
+          p ? <VideoView type={{ id }} /> : <></>,
         )}
 
         {realtime.__screensharing_peers.map((p) => (
           <div
             key={`${p.id} - screen sharing`}
-            class="flex h-full w-full items-center rounded-lg bg-neutral-800"
+            class="flex h-full w-full items-center rounded-lg bg-neutral-100 dark:bg-neutral-800"
           >
             <div class="flex flex-1 flex-col items-center  space-y-2 ">
               <button
@@ -220,12 +219,15 @@ export default component$((_: { channel: Channel }) => {
                       p.screensharing.tracks,
                     );
 
-                    streaming.screensharing.stream = noSerialize(stream);
+                    streaming.screensharing = {
+                      ...streaming.screensharing,
+                      stream: noSerialize(stream),
+                    };
                   } catch (e) {
                     console.warn("Cannot pull tracks", e);
                   }
                 }}
-                class="rounded-full bg-neutral-900 px-4 py-2 hover:bg-black"
+                class="rounded-full border bg-white px-4 py-2 hover:bg-neutral-50 dark:bg-neutral-900 hover:dark:bg-black"
               >
                 View screen
               </button>

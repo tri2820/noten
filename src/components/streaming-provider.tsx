@@ -30,6 +30,7 @@ type VoiceRealtimeContext = {
 type StreamingContext = {
   local: {
     name: string;
+    message_id: MessageID;
     media_state: {
       audio: boolean;
       video: boolean;
@@ -97,6 +98,7 @@ export default component$(() => {
   const streaming = useStore<StreamingContext>({
     local: {
       name: "You",
+      message_id: new Date().toISOString(),
       media_state: {
         video: true,
         audio: false,
@@ -170,7 +172,11 @@ export default component$(() => {
           o.tracks.data,
         );
 
-        streaming.peer_videos[o.id]!.stream = noSerialize(stream);
+        streaming.peer_videos[o.id] = {
+          ...streaming.peer_videos[o.id]!,
+          stream: noSerialize(stream),
+        };
+
         console.log("all good");
       } catch (e) {
         console.warn("Cannot pull tracks", e);
