@@ -5,22 +5,24 @@ import {
   useContext,
   useVisibleTask$,
 } from "@builder.io/qwik";
+import { useNavigate } from "@builder.io/qwik-city";
 import {
   LuArrowLeftToLine,
   LuCamera,
   LuCameraOff,
   LuMic,
   LuMicOff,
+  LuPhoneOff,
   LuScreenShare,
   LuScreenShareOff,
 } from "@qwikest/icons/lucide";
 import { beam, createCallsSession, pull_tracks, push_tracks } from "~/calls";
-import { Channel } from "~/components/local-data-provider";
+import { LocalDataContext } from "~/components/local-data-provider";
 import { StreamingContext, VoiceRealtimeContext } from "./streaming-provider";
-import VideoView from "./video-view";
 import { SupabaseContext } from "./supabase-provider";
+import VideoView from "./video-view";
 
-export default component$((_: { channel: Channel }) => {
+export default component$(() => {
   const supabase = useContext(SupabaseContext);
   const streaming = useContext(StreamingContext);
   const realtime = useContext(VoiceRealtimeContext);
@@ -229,7 +231,7 @@ export default component$((_: { channel: Channel }) => {
                         console.warn("Cannot pull tracks", e);
                       }
                     }}
-                    class="rounded-full border bg-white px-4 py-2 hover:bg-neutral-50 dark:bg-neutral-900 hover:dark:bg-black"
+                    class="is-button"
                   >
                     View screen
                   </button>
@@ -239,10 +241,10 @@ export default component$((_: { channel: Channel }) => {
             </div>
           ))}
         </div>
+      ) : streaming.mode == "focus_screensharing" ? (
+        <VideoView type="local" />
       ) : (
-        <div class="flex-1">
-          <VideoView type="screensharing" muted />
-        </div>
+        <></>
       )}
 
       <div class="flex flex-none items-center space-x-2 ">
@@ -280,6 +282,7 @@ export default component$((_: { channel: Channel }) => {
             )}
           </button>
 
+          {/* start sharing my screen, or stop my sharing, or stop watching other screens */}
           <button
             class="rounded-full  bg-neutral-300 p-4 text-black hover:bg-white"
             onClick$={share_or_stop_screen}
@@ -293,6 +296,31 @@ export default component$((_: { channel: Channel }) => {
             ) : (
               <LuScreenShare class="h-6 w-6" />
             )}
+          </button>
+
+          <button
+            class="rounded-full  bg-neutral-300 p-4 text-black hover:bg-white"
+            onClick$={() => {
+              if (streaming.local.stream) {
+                streaming.local = {
+                  ...streaming.local,
+                  stream: undefined,
+                };
+                realtime.local = {
+                  ...realtime.local,
+                  tracks: undefined,
+                };
+              }
+
+              // Stop sharing mine or stop watching other streams
+              if (streaming.screensharing) {
+                stop_sharing();
+              }
+
+              streaming.mode = "preview";
+            }}
+          >
+            <LuPhoneOff class="h-6 w-6" />
           </button>
         </div>
         <div class="flex-1" />

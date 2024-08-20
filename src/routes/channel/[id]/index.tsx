@@ -7,6 +7,11 @@ import {
 import { type DocumentHead } from "@builder.io/qwik-city";
 import { LuHash, LuVolume2 } from "@qwikest/icons/lucide";
 import { Channel, LocalDataContext } from "~/components/local-data-provider";
+import {
+  StreamingContext,
+  VoiceRealtimeContext,
+} from "~/components/streaming-provider";
+import { SupabaseContext } from "~/components/supabase-provider";
 import TextChannelView from "~/components/text-channel-view";
 import TopBar from "~/components/top-bar";
 import VoiceChannelView from "~/components/voice-channel-view";
@@ -14,6 +19,9 @@ import { convertChannelNameToSlug, HEAD } from "~/utils";
 
 export default component$(() => {
   const localData = useContext(LocalDataContext);
+  const streaming = useContext(StreamingContext);
+  const realtime = useContext(VoiceRealtimeContext);
+  const supabase = useContext(SupabaseContext);
   const store = useStore<{
     channel?: Channel;
   }>({});
@@ -23,7 +31,7 @@ export default component$(() => {
     const c = localData.channels.find((x) => x.id == channel_id);
     if (!c) return;
     store.channel = c;
-
+    console.log("CHANNEL IS", c);
     // TODO: load channel
 
     cleanup(() => {
@@ -53,8 +61,47 @@ export default component$(() => {
 
       {store.channel.type == "text" ? (
         <TextChannelView channel={store.channel} />
+      ) : streaming.mode == "preview" ? (
+        <div class="flex flex-1 flex-col items-center justify-center">
+          <div class="flex flex-col items-center space-y-4">
+            <div class="text-center">
+              {/* {JSON.stringify(realtime.__ready_peers.map((p) => p.name))} */}
+              {realtime.__ready_peers.length > 3 ? (
+                <div>
+                  {realtime.__ready_peers[0].name},{" "}
+                  {realtime.__ready_peers[1].name}, and{" "}
+                  {realtime.__ready_peers.length - 2} others
+                </div>
+              ) : realtime.__ready_peers.length > 2 ? (
+                <div>
+                  {realtime.__ready_peers[0].name},{" "}
+                  {realtime.__ready_peers[1].name}, and{" "}
+                  {realtime.__ready_peers[2].name}
+                </div>
+              ) : realtime.__ready_peers.length > 1 ? (
+                <div>
+                  {realtime.__ready_peers[0].name} and{" "}
+                  {realtime.__ready_peers[1].name}
+                </div>
+              ) : realtime.__ready_peers.length > 0 ? (
+                <div>{realtime.__ready_peers[0].name}</div>
+              ) : (
+                <div>No one is here</div>
+              )}
+            </div>
+
+            <button
+              class="is-button"
+              onClick$={() => {
+                streaming.mode = "grid";
+              }}
+            >
+              Join
+            </button>
+          </div>
+        </div>
       ) : (
-        <VoiceChannelView channel={store.channel} />
+        <VoiceChannelView />
       )}
     </div>
   );

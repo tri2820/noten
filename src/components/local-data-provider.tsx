@@ -45,19 +45,14 @@ export const LocalDataContext = createContextId<LocalDataContext>("local-data");
 export default component$(() => {
   const loc = useLocation();
 
-  // TODO: should not be cleaned up automatically (e.g. to maintain the call state)
   const note_id = useComputed$(() => {
     const regex = /^\/note\/[a-f0-9-]+\//i;
     if (regex.test(loc.url.pathname)) return loc.params.id;
   });
 
-  const channel_id = useSignal<string>();
-  useVisibleTask$(({ track }) => {
-    const l = track(loc);
+  const channel_id = useComputed$(() => {
     const regex = /^\/channel\/[a-f0-9-]+\//i;
-    if (!regex.test(l.url.pathname)) return;
-
-    channel_id.value = l.params.id;
+    if (regex.test(loc.url.pathname)) return loc.params.id;
   });
 
   const store = useStore<LocalDataContext>({

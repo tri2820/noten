@@ -61,7 +61,10 @@ export default component$(() => {
         </button>
         <div class="flex-1" />
 
-        <Avatar class="h-8 w-8 rounded-lg" src={supabase.profile?.avatar} />
+        <div>{supabase.profile?.name}</div>
+        <div class="flex-none">
+          <Avatar class="h-8 w-8 rounded-lg" src={supabase.profile?.avatar} />
+        </div>
       </div>
     </div>
   );

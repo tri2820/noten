@@ -3,9 +3,11 @@ import {
   createContextId,
   NoSerialize,
   noSerialize,
+  Signal,
   Slot,
   useContext,
   useContextProvider,
+  useSignal,
   useStore,
   useTask$,
   useVisibleTask$,
@@ -15,6 +17,7 @@ import { SupabaseContext } from "./supabase-provider";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { createCallsSession, pull_tracks } from "~/calls";
 import VideoView from "./video-view";
+import { useLocation } from "@builder.io/qwik-city";
 
 type VoiceRealtimeContext = {
   subscribed?: {
@@ -54,7 +57,8 @@ type StreamingContext = {
         }
       | undefined;
   };
-  mode: "grid" | "focus_screensharing";
+  voice_channel_id: Signal<string | undefined>;
+  mode: "grid" | "focus_screensharing" | "preview";
 };
 
 export type MessageID = string;
@@ -97,6 +101,9 @@ export const VoiceRealtimeContext = createContextId<VoiceRealtimeContext>(
   "voice-realtime-context",
 );
 export default component$(() => {
+  const loc = useLocation();
+  const voice_channel_id = useSignal<string>();
+
   const streaming = useStore<StreamingContext>({
     local: {
       name: "You",
@@ -108,8 +115,19 @@ export default component$(() => {
     },
     peer_videos: {},
     mode: "grid",
+    voice_channel_id,
   });
   useContextProvider(StreamingContext, streaming);
+
+  useVisibleTask$(({ track }) => {
+    const l = track(loc);
+    const regex = /^\/channel\/[a-f0-9-]+\//i;
+    if (!regex.test(l.url.pathname)) return;
+    // Could be id of a text channel, but we care more about the persistence of the value than the correctness
+    // Only change if click on another voice channel
+    voice_channel_id.value = l.params.id;
+    streaming.mode = "grid";
+  });
 
   const realtime = useStore<VoiceRealtimeContext>({
     __ready_peers: [],
@@ -134,6 +152,14 @@ export default component$(() => {
       // TODO: These should be figured out by the receiver, not by the sender
       id: profile.id,
       name: profile.name,
+    });
+  });
+
+  // Sometimes race condition occurs, make sure to clean up :)
+  useVisibleTask$(async ({ track, cleanup }) => {
+    const s = track(() => streaming.local.stream);
+    cleanup(() => {
+      s?.getTracks().forEach((t) => t.stop());
     });
   });
 
@@ -228,7 +254,7 @@ export default component$(() => {
   useVisibleTask$(({ track, cleanup }) => {
     const client = track(() => supabase.client);
     const user = track(() => supabase.user);
-    const channel_id = track(localData.channel_id);
+    const channel_id = track(streaming.voice_channel_id);
     if (!user) return;
     if (!client) return;
     if (!channel_id) return;
