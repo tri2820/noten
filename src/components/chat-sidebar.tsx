@@ -18,10 +18,10 @@ export default component$(() => {
   const localData = useContext(LocalDataContext);
 
   return (
-    <>
+    <div class="flex flex-1 flex-col items-stretch overflow-hidden slide-out-to-left">
       <Slot />
 
-      <div class="my-4 max-w-full flex-1 space-y-8 overflow-y-auto overflow-x-hidden  px-4">
+      <div class="max-w-full flex-1 space-y-8 overflow-y-auto overflow-x-hidden px-4  pt-4">
         <div class="space-y-2">
           <button class="text-hover flex flex-none items-center space-x-2">
             <div class="flex-none text-xs ">TEXT CHANNELS</div>
@@ -80,6 +80,6 @@ export default component$(() => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 });

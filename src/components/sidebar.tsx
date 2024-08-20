@@ -21,7 +21,7 @@ export default component$(() => {
   return (
     <div
       data-close={ui.sidebar_close}
-      class="flex h-screen w-64 flex-none flex-col items-stretch overflow-hidden border-r duration-300 data-[close]:w-0 "
+      class="flex h-screen w-64 flex-none flex-col items-stretch border-r duration-300 data-[close]:w-0 "
     >
       <S.value>
         <div class=" flex h-14 w-full flex-none items-center space-x-2 border-b px-4">
@@ -45,7 +45,8 @@ export default component$(() => {
           onClick$={() => {
             ui.sidebar_mode = "library";
           }}
-          class="icon-hover flex-none"
+          data-active={ui.sidebar_mode === "library"}
+          class="icon-hover flex-none data-[active]:text-black data-[active]:dark:text-white"
         >
           <BsBookmarkFill />
         </button>
@@ -53,7 +54,8 @@ export default component$(() => {
           onClick$={() => {
             ui.sidebar_mode = "chat";
           }}
-          class="icon-hover flex-none"
+          data-active={ui.sidebar_mode === "chat"}
+          class="icon-hover flex-none data-[active]:text-black data-[active]:dark:text-white"
         >
           <BsChatFill />
         </button>
