@@ -26,8 +26,8 @@ export type Note = {
 };
 
 export type LocalDataContext = {
-  note_id: Signal<string | undefined>;
-  channel_id: Signal<string | undefined>;
+  note_id?: string;
+  channel_id?: string;
   channels: Channel[];
   notes: Note[];
   profile: {
@@ -45,19 +45,7 @@ export const LocalDataContext = createContextId<LocalDataContext>("local-data");
 export default component$(() => {
   const loc = useLocation();
 
-  const note_id = useComputed$(() => {
-    const regex = /^\/note\/[a-f0-9-]+\//i;
-    if (regex.test(loc.url.pathname)) return loc.params.id;
-  });
-
-  const channel_id = useComputed$(() => {
-    const regex = /^\/channel\/[a-f0-9-]+\//i;
-    if (regex.test(loc.url.pathname)) return loc.params.id;
-  });
-
   const store = useStore<LocalDataContext>({
-    note_id,
-    channel_id,
     profile: {},
     channels: [
       {

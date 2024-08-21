@@ -20,7 +20,7 @@ export default component$(() => {
           <div>
             {localData.notes.map((note) => (
               <div
-                data-active={localData.note_id.value === note.id}
+                data-active={localData.note_id === note.id}
                 key={note.id}
                 class="text-hover flex items-center space-x-2 rounded-lg p-2 data-[active]:bg-neutral-200 data-[active]:text-black data-[active]:dark:bg-neutral-900 data-[active]:dark:text-white"
               >

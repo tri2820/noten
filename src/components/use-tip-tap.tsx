@@ -100,7 +100,7 @@ export default (ref: Signal<HTMLElement | undefined>) => {
     const user = track(() => supabase.user);
     const profile = track(() => supabase.profile);
     const element = track(ref);
-    const id = track(localData.note_id);
+    const id = track(() => localData.note_id);
     const init_state = track(() => store.init_state);
 
     if (!client) return;

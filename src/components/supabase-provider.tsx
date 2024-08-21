@@ -62,7 +62,7 @@ export const SupabaseProvider = component$(() => {
       );
       store.client = noSerialize(client);
       client.auth.onAuthStateChange(async (ev, session) => {
-        console.log("onAuth", ev, session);
+        // console.log("onAuth", ev, session);
         const user = session?.user;
 
         if (
@@ -70,7 +70,7 @@ export const SupabaseProvider = component$(() => {
           ev === "TOKEN_REFRESHED" ||
           ev === "USER_UPDATED"
         ) {
-          console.log("update user", user);
+          // console.log("update user", user);
           store.user = noSerialize(user);
           if (!user) {
             console.log("no user");

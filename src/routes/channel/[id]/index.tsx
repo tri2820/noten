@@ -4,8 +4,13 @@ import {
   useStore,
   useVisibleTask$,
 } from "@builder.io/qwik";
-import { type DocumentHead } from "@builder.io/qwik-city";
+import {
+  useLocation,
+  useNavigate,
+  type DocumentHead,
+} from "@builder.io/qwik-city";
 import { LuHash, LuVolume2 } from "@qwikest/icons/lucide";
+import { preview } from "vite";
 import { Channel, LocalDataContext } from "~/components/local-data-provider";
 import {
   StreamingContext,
@@ -17,25 +22,92 @@ import TopBar from "~/components/top-bar";
 import VoiceChannelView from "~/components/voice-channel-view";
 import { convertChannelNameToSlug, HEAD } from "~/utils";
 
-export default component$(() => {
-  const localData = useContext(LocalDataContext);
+const PeekView = component$(() => {
   const streaming = useContext(StreamingContext);
   const realtime = useContext(VoiceRealtimeContext);
-  const supabase = useContext(SupabaseContext);
+  return (
+    <div class="flex flex-1 flex-col items-center justify-center">
+      <div class="flex flex-col items-center space-y-4">
+        <div class="text-center">
+          {/* {JSON.stringify(realtime.__ready_peers.map((p) => p.name))} */}
+          {realtime.__ready_peers.length > 3 ? (
+            <div>
+              {realtime.__ready_peers[0].name}, {realtime.__ready_peers[1].name}
+              , and {realtime.__ready_peers.length - 2} others
+            </div>
+          ) : realtime.__ready_peers.length > 2 ? (
+            <div>
+              {realtime.__ready_peers[0].name}, {realtime.__ready_peers[1].name}
+              , and {realtime.__ready_peers[2].name}
+            </div>
+          ) : realtime.__ready_peers.length > 1 ? (
+            <div>
+              {realtime.__ready_peers[0].name} and{" "}
+              {realtime.__ready_peers[1].name}
+            </div>
+          ) : realtime.__ready_peers.length > 0 ? (
+            <div>{realtime.__ready_peers[0].name}</div>
+          ) : (
+            <div>No one is here</div>
+          )}
+        </div>
+
+        <button
+          class="is-button"
+          onClick$={() => {
+            streaming.bg_voice_channel = {
+              ...streaming.bg_voice_channel!,
+              peek: false,
+            };
+          }}
+        >
+          Join
+        </button>
+      </div>
+    </div>
+  );
+});
+
+export default component$(() => {
+  const streaming = useContext(StreamingContext);
+  const localData = useContext(LocalDataContext);
   const store = useStore<{
     channel?: Channel;
   }>({});
 
+  const loc = useLocation();
+
   useVisibleTask$(({ track, cleanup }) => {
-    const channel_id = track(localData.channel_id);
+    const l = track(loc);
+
+    if (l.isNavigating) return;
+
+    const channel_id = l.params.id;
+    localData.channel_id = channel_id;
     const c = localData.channels.find((x) => x.id == channel_id);
+
     if (!c) return;
     store.channel = c;
+
     console.log("CHANNEL IS", c);
     // TODO: load channel
 
+    if (c.type == "voice") {
+      streaming.bg_voice_channel = {
+        id: channel_id,
+        realtime_id: channel_id,
+        peek: false,
+      };
+    }
+
     cleanup(() => {
+      localData.channel_id = undefined;
       store.channel = undefined;
+      streaming.mode = "grid";
+
+      if (streaming.bg_voice_channel?.peek) {
+        streaming.bg_voice_channel = undefined;
+      }
     });
   });
 
@@ -61,45 +133,8 @@ export default component$(() => {
 
       {store.channel.type == "text" ? (
         <TextChannelView channel={store.channel} />
-      ) : streaming.mode == "preview" ? (
-        <div class="flex flex-1 flex-col items-center justify-center">
-          <div class="flex flex-col items-center space-y-4">
-            <div class="text-center">
-              {/* {JSON.stringify(realtime.__ready_peers.map((p) => p.name))} */}
-              {realtime.__ready_peers.length > 3 ? (
-                <div>
-                  {realtime.__ready_peers[0].name},{" "}
-                  {realtime.__ready_peers[1].name}, and{" "}
-                  {realtime.__ready_peers.length - 2} others
-                </div>
-              ) : realtime.__ready_peers.length > 2 ? (
-                <div>
-                  {realtime.__ready_peers[0].name},{" "}
-                  {realtime.__ready_peers[1].name}, and{" "}
-                  {realtime.__ready_peers[2].name}
-                </div>
-              ) : realtime.__ready_peers.length > 1 ? (
-                <div>
-                  {realtime.__ready_peers[0].name} and{" "}
-                  {realtime.__ready_peers[1].name}
-                </div>
-              ) : realtime.__ready_peers.length > 0 ? (
-                <div>{realtime.__ready_peers[0].name}</div>
-              ) : (
-                <div>No one is here</div>
-              )}
-            </div>
-
-            <button
-              class="is-button"
-              onClick$={() => {
-                streaming.mode = "grid";
-              }}
-            >
-              Join
-            </button>
-          </div>
-        </div>
+      ) : streaming.bg_voice_channel?.peek ? (
+        <PeekView />
       ) : (
         <VoiceChannelView />
       )}

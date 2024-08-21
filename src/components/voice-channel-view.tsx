@@ -3,6 +3,7 @@ import {
   component$,
   noSerialize,
   useContext,
+  useTask$,
   useVisibleTask$,
 } from "@builder.io/qwik";
 import { useNavigate } from "@builder.io/qwik-city";
@@ -170,8 +171,13 @@ export default component$(() => {
   });
 
   //   Startup
-  useVisibleTask$(async () => {
+  useVisibleTask$(async ({ cleanup }) => {
     console.log("startup...");
+    streaming.local_stream_lock = true;
+    cleanup(() => {
+      streaming.local_stream_lock = false;
+    });
+
     if (streaming.local.stream) return;
     console.log("push...");
     const localSession = await createCallsSession();
@@ -317,7 +323,10 @@ export default component$(() => {
                 stop_sharing();
               }
 
-              streaming.mode = "preview";
+              streaming.bg_voice_channel = {
+                ...streaming.bg_voice_channel!,
+                peek: true,
+              };
             }}
           >
             <LuPhoneOff class="h-6 w-6" />

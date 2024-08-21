@@ -22,7 +22,7 @@ export default component$(() => {
               .filter((channel) => channel.type === "text")
               .map((channel) => (
                 <div
-                  data-active={localData.channel_id.value === channel.id}
+                  data-active={localData.channel_id === channel.id}
                   key={channel.id}
                   class="text-hover flex items-center space-x-2 rounded-lg p-2 data-[active]:bg-neutral-200 data-[active]:text-black data-[active]:dark:bg-neutral-900 data-[active]:dark:text-white"
                 >
@@ -51,7 +51,7 @@ export default component$(() => {
               .filter((channel) => channel.type === "voice")
               .map((channel) => (
                 <div
-                  data-active={localData.channel_id.value === channel.id}
+                  data-active={localData.channel_id === channel.id}
                   key={channel.id}
                   class="text-hover flex items-center space-x-2 rounded-lg p-2 data-[active]:bg-neutral-200 data-[active]:text-black data-[active]:dark:bg-neutral-900 data-[active]:dark:text-white"
                 >

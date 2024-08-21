@@ -5,6 +5,7 @@ import {
   noSerialize,
   Signal,
   Slot,
+  useComputed$,
   useContext,
   useContextProvider,
   useSignal,
@@ -57,8 +58,14 @@ type StreamingContext = {
         }
       | undefined;
   };
-  voice_channel_id: Signal<string | undefined>;
-  mode: "grid" | "focus_screensharing" | "preview";
+
+  bg_voice_channel?: {
+    id: string;
+    realtime_id: string;
+    peek: boolean;
+  };
+  mode: "grid" | "focus_screensharing";
+  local_stream_lock: boolean;
 };
 
 export type MessageID = string;
@@ -101,9 +108,6 @@ export const VoiceRealtimeContext = createContextId<VoiceRealtimeContext>(
   "voice-realtime-context",
 );
 export default component$(() => {
-  const loc = useLocation();
-  const voice_channel_id = useSignal<string>();
-
   const streaming = useStore<StreamingContext>({
     local: {
       name: "You",
@@ -115,19 +119,10 @@ export default component$(() => {
     },
     peer_videos: {},
     mode: "grid",
-    voice_channel_id,
+
+    local_stream_lock: false,
   });
   useContextProvider(StreamingContext, streaming);
-
-  useVisibleTask$(({ track }) => {
-    const l = track(loc);
-    const regex = /^\/channel\/[a-f0-9-]+\//i;
-    if (!regex.test(l.url.pathname)) return;
-    // Could be id of a text channel, but we care more about the persistence of the value than the correctness
-    // Only change if click on another voice channel
-    voice_channel_id.value = l.params.id;
-    streaming.mode = "grid";
-  });
 
   const realtime = useStore<VoiceRealtimeContext>({
     __ready_peers: [],
@@ -147,6 +142,7 @@ export default component$(() => {
     if (!local) return;
     if (!profile) return;
 
+    console.log("track", local);
     subscribed.room.track({
       ...local,
       // TODO: These should be figured out by the receiver, not by the sender
@@ -213,10 +209,10 @@ export default component$(() => {
     });
 
     const s = streaming.screensharing;
-    console.log("hey", s);
+
     if (!s) return;
     const current_screensharing_peer = ready_peers.find((p) => p.id == s.id);
-    console.log("yo", current_screensharing_peer);
+
     if (
       !current_screensharing_peer ||
       !current_screensharing_peer.screensharing
@@ -254,7 +250,8 @@ export default component$(() => {
   useVisibleTask$(({ track, cleanup }) => {
     const client = track(() => supabase.client);
     const user = track(() => supabase.user);
-    const channel_id = track(streaming.voice_channel_id);
+    const channel_id = track(() => streaming.bg_voice_channel?.realtime_id);
+
     if (!user) return;
     if (!client) return;
     if (!channel_id) return;
@@ -289,10 +286,10 @@ export default component$(() => {
         );
       })
       .on("presence", { event: "join" }, ({ key, newPresences }) => {
-        console.log("join", key, newPresences);
+        // console.log("join", key, newPresences);
       })
       .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-        console.log("leave", key, leftPresences);
+        // console.log("leave", key, leftPresences);
       })
       .subscribe(async (status) => {
         console.log("status", status);
@@ -309,7 +306,8 @@ export default component$(() => {
       });
 
     cleanup(() => {
-      // TODO: maintain even after?
+      console.log("unsub");
+      room.untrack();
       room.unsubscribe();
       realtime.subscribed = undefined;
     });
@@ -335,10 +333,21 @@ export default component$(() => {
 
   return (
     <div class="relative">
-      {streaming.mode == "focus_screensharing" && (
+      <div>
+        local_stream_lock:{" "}
+        {streaming.local_stream_lock ? "showing" : "not_showing"}
+      </div>
+      <div>bg: {JSON.stringify(streaming.bg_voice_channel)}</div>
+      {(streaming.mode == "focus_screensharing" ||
+        (!streaming.local_stream_lock &&
+          streaming.bg_voice_channel &&
+          // No stream would ever be available in this case
+          // TODO: check by waiting local stream status?
+          !streaming.bg_voice_channel.peek)) && (
         <div class="fixed bottom-0 right-0 z-50 px-2 py-4">
-          <div class="aspect-video w-64">
+          <div class="aspect-video w-64 ">
             {/* TODO: Change to speaking user */}
+            {/* TODO: Back to call button */}
             <VideoView type="local" />
           </div>
         </div>

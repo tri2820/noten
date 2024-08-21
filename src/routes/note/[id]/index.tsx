@@ -5,7 +5,7 @@ import {
   useSignal,
   useVisibleTask$,
 } from "@builder.io/qwik";
-import { type DocumentHead } from "@builder.io/qwik-city";
+import { useLocation, type DocumentHead } from "@builder.io/qwik-city";
 import TopBar from "~/components/top-bar";
 
 import { LocalDataContext, Note } from "~/components/local-data-provider";
@@ -55,14 +55,24 @@ export default component$(() => {
   const hide_tiptap = useSignal(false);
   const localData = useContext(LocalDataContext);
   const note = useSignal<Note>();
+  const loc = useLocation();
 
   useVisibleTask$(async ({ track, cleanup }) => {
-    const id = track(localData.note_id);
+    const id = track(() => loc.params.id);
+    localData.note_id = id;
+    cleanup(() => {
+      localData.note_id = undefined;
+    });
+
     const client = track(() => supabase.client);
     if (!client) return;
 
     const n = localData.notes.find((x) => x.id == id);
     note.value = n;
+
+    cleanup(() => {
+      note.value = undefined;
+    });
 
     const _select = await client.from("note").select().eq("id", id).single();
     if (_select.error) {
@@ -81,7 +91,6 @@ export default component$(() => {
     hide_tiptap.value = _select.data.state ? false : true;
 
     cleanup(() => {
-      note.value = undefined;
       tiptap.init_state = undefined;
     });
   });
