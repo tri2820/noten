@@ -1,6 +1,8 @@
 import {
   component$,
+  NoSerialize,
   useContext,
+  useSignal,
   useStore,
   useVisibleTask$,
 } from "@builder.io/qwik";
@@ -71,9 +73,7 @@ const PeekView = component$(() => {
 export default component$(() => {
   const streaming = useContext(StreamingContext);
   const localData = useContext(LocalDataContext);
-  const store = useStore<{
-    channel?: Channel;
-  }>({});
+  const channel = useSignal<{ [key: string]: any }>();
 
   const loc = useLocation();
 
@@ -86,11 +86,12 @@ export default component$(() => {
     localData.channel_id = channel_id;
     const c = localData.channels.find((x) => x.id == channel_id);
 
-    if (!c) return;
-    store.channel = c;
+    if (!c) {
+      // TODO: load channel
+      return;
+    }
 
-    console.log("CHANNEL IS", c);
-    // TODO: load channel
+    channel.value = c;
 
     if (c.type == "voice") {
       streaming.bg_voice_channel = {
@@ -98,41 +99,43 @@ export default component$(() => {
         realtime_id: channel_id,
         peek: false,
       };
+    } else {
+      localData.text_channel_id = c.id;
     }
 
     cleanup(() => {
       localData.channel_id = undefined;
-      store.channel = undefined;
       streaming.mode = "grid";
-
+      channel.value = undefined;
       if (streaming.bg_voice_channel?.peek) {
         streaming.bg_voice_channel = undefined;
       }
     });
   });
 
-  if (!store.channel) return <></>;
+  // TODO: Loading channel...
+  if (!channel.value) return <></>;
 
   return (
     <div
-      data-ctype={store.channel.type}
+      data-ctype={channel.value.type}
       class="flex h-screen flex-1 flex-col overflow-hidden  data-[ctype=text]:bg-white data-[ctype=voice]:bg-neutral-200 data-[ctype=text]:dark:bg-neutral-900 data-[ctype=voice]:dark:bg-black"
     >
       <TopBar>
         <div class="flex items-center space-x-2">
-          {store.channel.type == "text" ? (
+          {channel.value.type == "text" ? (
             <LuHash class="h-4 w-4" />
           ) : (
             <LuVolume2 class="h-4 w-4" />
           )}
           <div class="text-lg font-medium">
-            {convertChannelNameToSlug(store.channel.name)}
+            {convertChannelNameToSlug(channel.value.name)}
           </div>
         </div>
       </TopBar>
 
-      {store.channel.type == "text" ? (
-        <TextChannelView channel={store.channel} />
+      {channel.value.type == "text" ? (
+        <TextChannelView />
       ) : streaming.bg_voice_channel?.peek ? (
         <PeekView />
       ) : (

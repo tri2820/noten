@@ -18,7 +18,8 @@ import { SupabaseContext } from "./supabase-provider";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { createCallsSession, pull_tracks } from "~/calls";
 import VideoView from "./video-view";
-import { useLocation } from "@builder.io/qwik-city";
+import { useLocation, useNavigate } from "@builder.io/qwik-city";
+import { LuArrowLeft } from "@qwikest/icons/lucide";
 
 type VoiceRealtimeContext = {
   subscribed?: {
@@ -131,7 +132,7 @@ export default component$(() => {
   useContextProvider(VoiceRealtimeContext, realtime);
 
   const supabase = useContext(SupabaseContext);
-  const localData = useContext(LocalDataContext);
+  const nav = useNavigate();
 
   useTask$(({ track, cleanup }) => {
     const profile = track(() => supabase.profile);
@@ -333,11 +334,11 @@ export default component$(() => {
 
   return (
     <div class="relative">
-      <div>
+      {/* <div>
         local_stream_lock:{" "}
         {streaming.local_stream_lock ? "showing" : "not_showing"}
       </div>
-      <div>bg: {JSON.stringify(streaming.bg_voice_channel)}</div>
+      <div>bg: {JSON.stringify(streaming.bg_voice_channel)}</div> */}
       {(streaming.mode == "focus_screensharing" ||
         (!streaming.local_stream_lock &&
           streaming.bg_voice_channel &&
@@ -348,7 +349,18 @@ export default component$(() => {
           <div class="aspect-video w-64 ">
             {/* TODO: Change to speaking user */}
             {/* TODO: Back to call button */}
-            <VideoView type="local" />
+            <VideoView type="local" shadow>
+              <div class="flex-1" />
+              <button
+                onClick$={() => {
+                  nav(`/channel/${streaming.bg_voice_channel!.id}`);
+                }}
+                class="flex flex-none items-center space-x-2 px-2 py-2 text-sm leading-none tracking-tight text-neutral-300 hover:text-white"
+              >
+                <LuArrowLeft class="h-4 w-4 flex-none" />
+                <div>Back to call</div>
+              </button>
+            </VideoView>
           </div>
         </div>
       )}

@@ -16,7 +16,7 @@ import PendingText from "~/components/pending-text";
 import { SupabaseContext } from "~/components/supabase-provider";
 import { dateF } from "~/utils";
 
-export default component$((_: { channel: Channel }) => {
+export default component$(() => {
   const localData = useContext(LocalDataContext);
   const pinned_to_bottom = useSignal(true);
   const supabase = useContext(SupabaseContext);
@@ -43,7 +43,7 @@ export default component$((_: { channel: Channel }) => {
     const _select = await client
       .from("message")
       .select("*")
-      .eq("thread_id", _.channel.id);
+      .eq("thread_id", localData.text_channel_id);
 
     if (_select.error) {
       console.warn("error", _select.error);
@@ -70,7 +70,7 @@ export default component$((_: { channel: Channel }) => {
   });
 
   useVisibleTask$(async ({ track, cleanup }) => {
-    track(() => _.channel.id);
+    const channel_id = track(() => localData.text_channel_id);
     const client = track(() => supabase.client);
     if (!client) return;
     messages.value = await load(client);
@@ -82,7 +82,7 @@ export default component$((_: { channel: Channel }) => {
           event: "INSERT",
           schema: "public",
           table: "message",
-          filter: `thread_id=eq.${_.channel.id}`,
+          filter: `thread_id=eq.${channel_id}`,
         },
         async (payload) => {
           if (!messages.value) return;
@@ -106,7 +106,7 @@ export default component$((_: { channel: Channel }) => {
   const submit = $(async () => {
     if (!input.value) return;
     const _insert = await supabase.client!.from("message").insert({
-      thread_id: _.channel.id,
+      thread_id: localData.text_channel_id,
       content: input.value,
     });
     input.value = "";

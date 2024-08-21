@@ -28,6 +28,7 @@ export type Note = {
 export type LocalDataContext = {
   note_id?: string;
   channel_id?: string;
+  text_channel_id?: string;
   channels: Channel[];
   notes: Note[];
   profile: {

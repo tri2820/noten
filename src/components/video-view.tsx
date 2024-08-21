@@ -2,6 +2,7 @@ import {
   ClassList,
   component$,
   NoSerialize,
+  Slot,
   useComputed$,
   useContext,
   useSignal,
@@ -58,6 +59,7 @@ export default component$(
   (_: {
     type: "local" | "screensharing" | { id: string };
     muted?: boolean;
+    shadow?: boolean;
   }) => {
     const streaming = useContext(StreamingContext);
     const video = useSignal<HTMLVideoElement>();
@@ -97,8 +99,26 @@ export default component$(
 
     return (
       <div class="relative h-full w-full overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-900">
-        <div class="absolute bottom-2 left-2 z-10 rounded-lg bg-white/70 px-4 py-2 text-sm leading-none tracking-tight dark:bg-black/70">
-          {store.name}
+        <div class="absolute bottom-0 left-0 right-0 z-10 ">
+          <div
+            data-shadow={_.shadow}
+            class="relative h-full w-full p-2 data-[shadow]:pt-8 data-[shadow]:text-white"
+          >
+            {_.shadow && (
+              <div class="to-95%% absolute bottom-0 left-0 right-0 top-0 -z-10 bg-gradient-to-t from-black/75" />
+            )}
+
+            <div class="flex items-center space-x-2">
+              <div
+                data-bgtype={_.shadow ? "minimal" : "normal"}
+                class="flex-none rounded-lg   py-2 text-sm leading-none tracking-tight data-[bgtype=normal]:bg-white/70 data-[bgtype=minimal]:px-2 data-[bgtype=normal]:px-4 data-[bgtype=normal]:dark:bg-black/70"
+              >
+                {store.name}
+              </div>
+
+              <Slot />
+            </div>
+          </div>
         </div>
 
         <div class="absolute left-0 top-1/2 w-full -translate-y-1/2 ">
