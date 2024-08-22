@@ -1,14 +1,14 @@
 import {
   $,
   component$,
+  NoSerialize,
   noSerialize,
+  useComputed$,
   useContext,
-  useTask$,
+  useStore,
   useVisibleTask$,
 } from "@builder.io/qwik";
-import { useNavigate } from "@builder.io/qwik-city";
 import {
-  LuArrowLeftToLine,
   LuCamera,
   LuCameraOff,
   LuMic,
@@ -17,41 +17,67 @@ import {
   LuScreenShare,
   LuScreenShareOff,
 } from "@qwikest/icons/lucide";
-import { beam, createCallsSession, pull_tracks, push_tracks } from "~/calls";
-import { LocalDataContext } from "~/components/local-data-provider";
-import { StreamingContext, VoiceRealtimeContext } from "./streaming-provider";
+import { beam, createCallsSession, push_tracks } from "~/calls";
 import { SupabaseContext } from "./supabase-provider";
 import VideoView from "./video-view";
+import {
+  Device,
+  getReadyDevices,
+  VoiceChannelContext,
+  VoiceChannelManager,
+  VoiceChannelManagerContext,
+} from "./voice-channel-provider";
 
+const DEFAULT_STORE = () => ({
+  video_enabled: true,
+  audio_enabled: false,
+  screensharing_devices: {},
+  readyDevices: {
+    with_cam_loading_or_loaded: [],
+    with_screen_loading_or_loaded: [],
+  },
+});
 export default component$(() => {
   const supabase = useContext(SupabaseContext);
-  const streaming = useContext(StreamingContext);
-  const realtime = useContext(VoiceRealtimeContext);
+  const manager = useContext(VoiceChannelManagerContext);
+  const vc = useContext(VoiceChannelContext);
+  const store = useStore<{
+    my_device?: NoSerialize<NonNullable<Device>>;
+    pushing?: boolean;
+    video_enabled: boolean;
+    audio_enabled: boolean;
+    readyDevices: {
+      with_cam_loading_or_loaded: NonNullable<NoSerialize<Device>>[];
+      with_screen_loading_or_loaded: NonNullable<NoSerialize<Device>>[];
+    };
+  }>(DEFAULT_STORE);
+
+  const num_grid_cell = useComputed$(() =>
+    Math.ceil(
+      Math.sqrt(
+        (store.readyDevices.with_cam_loading_or_loaded.length ?? 0) +
+          (store.readyDevices.with_screen_loading_or_loaded.length ?? 0),
+      ),
+    ),
+  );
 
   const get_local_tracks_and_push = $(
     async (s: { peerConnection: RTCPeerConnection; sessionId: any }) => {
-      let _stream: MediaStream;
+      let stream: MediaStream;
       try {
-        _stream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
           audio: true,
         });
-
-        console.log("set local stream", _stream);
-        streaming.local = {
-          ...streaming.local,
-          message_id: new Date().toISOString(),
-          stream: noSerialize(_stream),
-        };
       } catch (e) {
         console.warn(e);
         return;
       }
 
-      const transceivers = await beam(s.peerConnection, _stream);
+      const transceivers = await beam(s.peerConnection, stream);
 
       const localTracks = transceivers.map((transceiver) => {
         return {
@@ -62,9 +88,6 @@ export default component$(() => {
       });
 
       await push_tracks(s.peerConnection, s.sessionId, localTracks);
-
-      console.log("pushed localTracks", localTracks);
-
       const tracks = transceivers.map((transceiver) => {
         return {
           location: "remote" as const,
@@ -73,46 +96,44 @@ export default component$(() => {
         };
       });
 
-      realtime.local = {
-        ...realtime.local,
-        tracks: {
-          message_id: new Date().toISOString(),
-          data: tracks,
-        },
-      };
+      return { tracks, stream: stream };
     },
   );
 
-  const stop_sharing = $(() => {
-    console.log(
-      "The user has ended sharing the screen",
-      streaming.screensharing,
-    );
-    streaming.screensharing!.stream?.getTracks().forEach((t) => t.stop());
-    streaming.screensharing = undefined;
-    streaming.mode = "grid";
-
-    realtime.local = {
-      ...realtime.local,
-      screensharing: undefined,
-    };
-  });
-
-  const share_or_stop_screen = $(async () => {
-    if (!supabase.profile) {
-      console.warn("Cannot share screen without a user");
+  const stop_sharing = $(async () => {
+    if (!store.my_device) {
+      console.warn("Cannot stop sharing without a device");
+      return;
+    }
+    if (!store.my_device.screensharing) {
+      console.warn("Cannot stop sharing without a screensharing");
       return;
     }
 
-    if (streaming.screensharing) {
+    if (!store.my_device.screensharing.stream) {
+      console.warn("Cannot stop sharing without a stream");
+      return;
+    }
+
+    store.my_device.screensharing.stream.getTracks().forEach((t) => t.stop());
+    store.my_device.screensharing = {};
+    store.my_device.sync();
+  });
+
+  const share_or_stop_screen = $(async () => {
+    if (!store.my_device) {
+      console.warn("Cannot share screen without a device");
+      return;
+    }
+
+    if (store.my_device.screensharing) {
       stop_sharing();
       return;
     }
 
-    let _stream = null;
-
+    let stream = null;
     try {
-      _stream = await navigator.mediaDevices.getDisplayMedia({
+      stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           displaySurface: "browser",
         },
@@ -125,22 +146,9 @@ export default component$(() => {
       return;
     }
 
-    const message_id = new Date().toISOString();
-    streaming.screensharing = {
-      id: supabase.profile.id,
-      message_id,
-      name: `${supabase.profile.name}'s screen`,
-      stream: noSerialize(_stream),
-    };
-
-    _stream.getVideoTracks()[0].addEventListener("ended", stop_sharing);
-
-    streaming.mode = "focus_screensharing";
-
     const s = await createCallsSession();
-
-    const transceivers = await beam(s.peerConnection, _stream);
-
+    stream.getVideoTracks()[0].addEventListener("ended", stop_sharing);
+    const transceivers = await beam(s.peerConnection, stream);
     const localTracks = transceivers.map((transceiver) => {
       return {
         location: "local" as const,
@@ -150,9 +158,6 @@ export default component$(() => {
     });
 
     await push_tracks(s.peerConnection, s.sessionId, localTracks);
-
-    console.log("pushed localTracks", localTracks);
-
     const tracks = transceivers.map((transceiver) => {
       return {
         location: "remote" as const,
@@ -161,97 +166,148 @@ export default component$(() => {
       };
     });
 
-    realtime.local = {
-      ...realtime.local,
-      screensharing: {
-        message_id,
-        tracks,
-      },
+    store.my_device.screensharing = {
+      tracks,
+      stream,
     };
+
+    store.my_device.sync();
   });
 
   //   Startup
-  useVisibleTask$(async ({ cleanup }) => {
-    console.log("startup...");
-    streaming.local_stream_lock = true;
+  useVisibleTask$(async ({ track, cleanup }) => {
+    const channel_id = track(() => vc.id);
+    if (!channel_id) return;
+
+    const join = track(() => manager.join);
+    if (!join) return;
+    await join(channel_id);
+
+    const my_device = manager.my[channel_id];
+    store.my_device = my_device;
+
     cleanup(() => {
-      streaming.local_stream_lock = false;
+      console.log("cleanup...");
+      const D = DEFAULT_STORE();
+      const keys = Object.keys(D);
+      keys.forEach(
+        (k) =>
+          // @ts-ignore
+          (store[k] = D[k]),
+      );
+      Object.keys(store).forEach((k) => {
+        if (keys.includes(k)) return;
+        // @ts-ignore
+        store[k] = undefined;
+      });
     });
 
-    if (streaming.local.stream) return;
-    console.log("push...");
-    const localSession = await createCallsSession();
-    get_local_tracks_and_push(localSession);
+    vc.local_stream_lock = true;
+    cleanup(() => {
+      vc.local_stream_lock = false;
+    });
+
+    const devices = track(
+      () => manager.devices?.filter((d) => d?.channel_id == channel_id) ?? [],
+    );
+    console.log("devices ..", devices);
+
+    const r = getReadyDevices(devices);
+    store.readyDevices = {
+      with_cam_loading_or_loaded: r.with_cam_loading_or_loaded
+        .map((d) => noSerialize(d))
+        .filter((d) => !!d),
+      with_screen_loading_or_loaded: r.with_screen_loading_or_loaded
+        .map((d) => noSerialize(d))
+        .filter((d) => !!d),
+    };
+
+    if (!my_device) {
+      console.warn("No my_device");
+      return;
+    }
+
+    if (!my_device.video.stream && !store.pushing) {
+      store.pushing = true;
+      const localSession = await createCallsSession();
+      const ok = await get_local_tracks_and_push(localSession);
+      store.pushing = false;
+
+      if (!ok) return;
+
+      my_device.video = {
+        tracks: ok.tracks,
+        stream: ok.stream,
+      };
+
+      my_device.sync();
+    }
+
+    my_device.toggle_audio("video", store.audio_enabled);
+    my_device.toggle_video("video", store.video_enabled);
   });
 
   return (
     <div class="flex flex-1 flex-col items-stretch space-y-4 p-4">
-      {streaming.mode == "grid" ? (
-        <div
-          class="grid flex-1 gap-2 overflow-hidden"
-          style={{
-            gridTemplateColumns: `repeat(${Math.ceil(
-              Math.sqrt(
-                realtime.__ready_peers.length +
-                  realtime.__screensharing_peers.length,
-              ),
-            )}, minmax(0, 1fr))`,
-          }}
-        >
-          <VideoView type="local" muted />
+      <div
+        class="grid flex-1 gap-2 overflow-hidden"
+        style={{
+          gridTemplateColumns: `repeat(${num_grid_cell.value}, minmax(0, 1fr))`,
+        }}
+      >
+        {store.readyDevices?.with_screen_loading_or_loaded.map((d) => (
+          <VideoView key={d.device_id} vkey="screensharing" device={d} muted />
+        ))}
 
-          {Object.entries(streaming.peer_videos).map(([id, p]) =>
-            p ? <VideoView type={{ id }} /> : <></>,
-          )}
+        {store.readyDevices?.with_cam_loading_or_loaded.map((d) => (
+          <VideoView key={d.device_id} vkey="video" device={d} />
+        ))}
+        {/* 
+        {store.with_screen_loading_or_loaded?.map((d) => (
+          <div
+            key={d.device_id}
+            class="flex h-full w-full items-center rounded-lg bg-neutral-100 dark:bg-neutral-800"
+          >
+            <div class="flex flex-1 flex-col items-center  space-y-2 ">
+              <button
+                onClick$={async () => {
+                  // if (d.id === supabase.user?.id) {
+                  //   streaming.mode = "focus_screensharing";
+                  //   return;
+                  // }
+                  // try {
+                  //   streaming.screensharing = {
+                  //     id: p.id,
+                  //     name: `${p.name}'s screen`,
+                  //     message_id: p.screensharing.message_id,
+                  //   };
+                  //   streaming.mode = "focus_screensharing";
+                  //   const s = await createCallsSession();
+                  //   const stream = await pull_tracks(
+                  //     s.peerConnection,
+                  //     s.sessionId,
+                  //     p.screensharing.tracks,
+                  //   );
+                  //   streaming.screensharing = {
+                  //     ...streaming.screensharing,
+                  //     stream: noSerialize(stream),
+                  //   };
+                  // } catch (e) {
+                  //   console.warn("Cannot pull tracks", e);
+                  // }
+                }}
+                class="is-button"
+              >
+                View screen
+              </button>
 
-          {realtime.__screensharing_peers.map((p) => (
-            <div
-              key={`${p.id} - screen sharing`}
-              class="flex h-full w-full items-center rounded-lg bg-neutral-100 dark:bg-neutral-800"
-            >
-              <div class="flex flex-1 flex-col items-center  space-y-2 ">
-                {p.id !== supabase.user?.id && (
-                  <button
-                    onClick$={async () => {
-                      try {
-                        streaming.screensharing = {
-                          id: p.id,
-                          name: `${p.name}'s screen`,
-                          message_id: p.screensharing.message_id,
-                        };
-
-                        streaming.mode = "focus_screensharing";
-
-                        const s = await createCallsSession();
-                        const stream = await pull_tracks(
-                          s.peerConnection,
-                          s.sessionId,
-                          p.screensharing.tracks,
-                        );
-
-                        streaming.screensharing = {
-                          ...streaming.screensharing,
-                          stream: noSerialize(stream),
-                        };
-                      } catch (e) {
-                        console.warn("Cannot pull tracks", e);
-                      }
-                    }}
-                    class="is-button"
-                  >
-                    View screen
-                  </button>
-                )}
-                <div class="text-center">{p.name} is sharing their screen</div>
+              <div class="text-center">
+                {d.user_name} is sharing their screen
               </div>
             </div>
-          ))}
-        </div>
-      ) : streaming.mode == "focus_screensharing" ? (
-        <VideoView type="local" />
-      ) : (
-        <></>
-      )}
+          </div>
+        ))} */}
+      </div>
 
       <div class="flex flex-none items-center space-x-2 ">
         <div class="flex-1" />
@@ -259,13 +315,11 @@ export default component$(() => {
           <button
             class="rounded-full  bg-neutral-300 p-4 text-black hover:bg-white"
             onClick$={async () => {
-              streaming.local.media_state = {
-                ...streaming.local.media_state,
-                video: !streaming.local.media_state.video,
-              };
+              store.video_enabled = !store.video_enabled;
+              store.my_device?.toggle_video("video", store.video_enabled);
             }}
           >
-            {streaming.local.media_state.video ? (
+            {store.video_enabled ? (
               <LuCamera class="h-6 w-6" />
             ) : (
               <LuCameraOff class="h-6 w-6" />
@@ -275,13 +329,11 @@ export default component$(() => {
           <button
             class="rounded-full  bg-neutral-300 p-4 text-black hover:bg-white"
             onClick$={async () => {
-              streaming.local.media_state = {
-                ...streaming.local.media_state,
-                audio: !streaming.local.media_state.audio,
-              };
+              store.audio_enabled = !store.audio_enabled;
+              store.my_device?.toggle_audio("video", store.audio_enabled);
             }}
           >
-            {streaming.local.media_state.audio ? (
+            {store.audio_enabled ? (
               <LuMic class="h-6 w-6" />
             ) : (
               <LuMicOff class="h-6 w-6" />
@@ -293,12 +345,8 @@ export default component$(() => {
             class="rounded-full  bg-neutral-300 p-4 text-black hover:bg-white"
             onClick$={share_or_stop_screen}
           >
-            {streaming.screensharing ? (
-              streaming.screensharing.id == supabase.user?.id ? (
-                <LuScreenShareOff class="h-6 w-6" />
-              ) : (
-                <LuArrowLeftToLine class="h-6 w-6" />
-              )
+            {store.my_device?.screensharing ? (
+              <LuScreenShareOff class="h-6 w-6" />
             ) : (
               <LuScreenShare class="h-6 w-6" />
             )}
@@ -306,27 +354,17 @@ export default component$(() => {
 
           <button
             class="rounded-full  bg-neutral-300 p-4 text-black hover:bg-white"
-            onClick$={() => {
-              if (streaming.local.stream) {
-                streaming.local = {
-                  ...streaming.local,
-                  stream: undefined,
-                };
-                realtime.local = {
-                  ...realtime.local,
-                  tracks: undefined,
-                };
+            onClick$={async () => {
+              if (store.my_device) {
+                const stream = store.my_device.video.stream;
+                if (stream) {
+                  stream.getTracks().forEach((t) => t.stop());
+                  store.my_device.video = {};
+                  store.my_device.sync();
+                }
               }
-
-              // Stop sharing mine or stop watching other streams
-              if (streaming.screensharing) {
-                stop_sharing();
-              }
-
-              streaming.bg_voice_channel = {
-                ...streaming.bg_voice_channel!,
-                peek: true,
-              };
+              stop_sharing();
+              vc.peek = true;
             }}
           >
             <LuPhoneOff class="h-6 w-6" />

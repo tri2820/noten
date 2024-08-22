@@ -1,54 +1,61 @@
 import {
   component$,
-  NoSerialize,
+  useComputed$,
   useContext,
   useSignal,
-  useStore,
   useVisibleTask$,
 } from "@builder.io/qwik";
-import {
-  useLocation,
-  useNavigate,
-  type DocumentHead,
-} from "@builder.io/qwik-city";
+import { useLocation, type DocumentHead } from "@builder.io/qwik-city";
 import { LuHash, LuVolume2 } from "@qwikest/icons/lucide";
-import { preview } from "vite";
-import { Channel, LocalDataContext } from "~/components/local-data-provider";
-import {
-  StreamingContext,
-  VoiceRealtimeContext,
-} from "~/components/streaming-provider";
-import { SupabaseContext } from "~/components/supabase-provider";
+import { LocalDataContext } from "~/components/local-data-provider";
 import TextChannelView from "~/components/text-channel-view";
 import TopBar from "~/components/top-bar";
+import {
+  getReadyDevices,
+  VoiceChannelContext,
+  VoiceChannelManagerContext,
+} from "~/components/voice-channel-provider";
+
 import VoiceChannelView from "~/components/voice-channel-view";
 import { convertChannelNameToSlug, HEAD } from "~/utils";
 
 const PeekView = component$(() => {
-  const streaming = useContext(StreamingContext);
-  const realtime = useContext(VoiceRealtimeContext);
+  const manager = useContext(VoiceChannelManagerContext);
+  const vc = useContext(VoiceChannelContext);
+  const names = useSignal<string[]>([]);
+
+  useVisibleTask$(async ({ track }) => {
+    const id = track(() => vc.id);
+    if (!id) return;
+    const devices = track(
+      () => manager.devices?.filter((x) => x?.channel_id == id) ?? [],
+    );
+    const ready_devices = getReadyDevices(devices);
+    names.value = ready_devices.with_cam_loading_or_loaded
+      .filter((d) => d.device_id != manager.device_id)
+      .map((d) => d.user_name);
+  });
+
   return (
     <div class="flex flex-1 flex-col items-center justify-center">
       <div class="flex flex-col items-center space-y-4">
         <div class="text-center">
           {/* {JSON.stringify(realtime.__ready_peers.map((p) => p.name))} */}
-          {realtime.__ready_peers.length > 3 ? (
+          {names.value.length > 3 ? (
             <div>
-              {realtime.__ready_peers[0].name}, {realtime.__ready_peers[1].name}
-              , and {realtime.__ready_peers.length - 2} others
+              {names.value[0]}, {names.value[1]}, and {names.value.length - 2}{" "}
+              others
             </div>
-          ) : realtime.__ready_peers.length > 2 ? (
+          ) : names.value.length > 2 ? (
             <div>
-              {realtime.__ready_peers[0].name}, {realtime.__ready_peers[1].name}
-              , and {realtime.__ready_peers[2].name}
+              {names.value[0]}, {names.value[1]}, and {names.value[2]}
             </div>
-          ) : realtime.__ready_peers.length > 1 ? (
+          ) : names.value.length > 1 ? (
             <div>
-              {realtime.__ready_peers[0].name} and{" "}
-              {realtime.__ready_peers[1].name}
+              {names.value[0]} and {names.value[1]}
             </div>
-          ) : realtime.__ready_peers.length > 0 ? (
-            <div>{realtime.__ready_peers[0].name}</div>
+          ) : names.value.length > 0 ? (
+            <div>{names.value[0]}</div>
           ) : (
             <div>No one is here</div>
           )}
@@ -57,10 +64,7 @@ const PeekView = component$(() => {
         <button
           class="is-button"
           onClick$={() => {
-            streaming.bg_voice_channel = {
-              ...streaming.bg_voice_channel!,
-              peek: false,
-            };
+            vc.peek = false;
           }}
         >
           Join
@@ -71,7 +75,8 @@ const PeekView = component$(() => {
 });
 
 export default component$(() => {
-  const streaming = useContext(StreamingContext);
+  const manager = useContext(VoiceChannelManagerContext);
+  const vc = useContext(VoiceChannelContext);
   const localData = useContext(LocalDataContext);
   const channel = useSignal<{ [key: string]: any }>();
 
@@ -79,10 +84,8 @@ export default component$(() => {
 
   useVisibleTask$(({ track, cleanup }) => {
     const l = track(loc);
-
-    if (l.isNavigating) return;
-
     const channel_id = l.params.id;
+    console.log("set channel_id", channel_id);
     localData.channel_id = channel_id;
     const c = localData.channels.find((x) => x.id == channel_id);
 
@@ -94,27 +97,26 @@ export default component$(() => {
     channel.value = c;
 
     if (c.type == "voice") {
-      streaming.bg_voice_channel = {
-        id: channel_id,
-        realtime_id: channel_id,
-        peek: false,
-      };
+      vc.id = channel_id;
+      vc.peek = false;
     } else {
       localData.text_channel_id = c.id;
     }
 
     cleanup(() => {
       localData.channel_id = undefined;
-      streaming.mode = "grid";
       channel.value = undefined;
-      if (streaming.bg_voice_channel?.peek) {
-        streaming.bg_voice_channel = undefined;
+      if (vc.peek && vc.id) {
+        vc.id = undefined;
+        vc.peek = undefined;
       }
     });
   });
 
   // TODO: Loading channel...
   if (!channel.value) return <></>;
+
+  // return <div>Hey</div>;
 
   return (
     <div
@@ -136,10 +138,8 @@ export default component$(() => {
 
       {channel.value.type == "text" ? (
         <TextChannelView />
-      ) : streaming.bg_voice_channel?.peek ? (
-        <PeekView />
       ) : (
-        <VoiceChannelView />
+        <>{vc.peek ? <PeekView /> : <VoiceChannelView />}</>
       )}
     </div>
   );

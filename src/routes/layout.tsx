@@ -7,10 +7,11 @@ import {
 } from "@builder.io/qwik-city";
 import DataProvider from "~/components/local-data-provider";
 import Sidebar from "~/components/sidebar";
-import StreamingProvider from "~/components/streaming-provider";
+
 import { SupabaseProvider } from "~/components/supabase-provider";
 import { createServerClient } from "~/components/supabase/supabase-auth-helpers-qwik";
 import UiProvider, { UIContext } from "~/components/ui-provider";
+import VoiceChannelProvider from "~/components/voice-channel-provider";
 
 async function isLoggedIn(ev: RequestEvent) {
   const supabase = createServerClient(
@@ -66,7 +67,7 @@ export default component$(() => {
       <DataProvider>
         <UiProvider ui={ui.value}>
           <SupabaseProvider>
-            <StreamingProvider>
+            <VoiceChannelProvider>
               {loc.url.pathname === "/login/" ? (
                 <Slot />
               ) : (
@@ -75,7 +76,7 @@ export default component$(() => {
                   <Slot />
                 </div>
               )}
-            </StreamingProvider>
+            </VoiceChannelProvider>
           </SupabaseProvider>
         </UiProvider>
       </DataProvider>
